@@ -207,7 +207,7 @@ namespace snemo {
       for (size_t ihit = 0; ihit < number_of_calo_hits; ihit++) {
         const mctools::base_step_hit & calo_hit = sim_data_.get_step_hit(hit_label, ihit);
         const int hit_id = calo_hit.get_hit_id();
-        const double start_signal_time = calo_hit.get_time_start(); // * CLHEP::ns;
+        const double start_signal_time = calo_hit.get_time_start();
         if (!datatools::is_valid(event_time_ref)) event_time_ref = start_signal_time;
         if (start_signal_time < event_time_ref) event_time_ref = start_signal_time;
         if (hit_id > last_hit_id) last_hit_id = hit_id;
@@ -310,13 +310,6 @@ namespace snemo {
         }
         // Update the set of hit GIDs:
         set_of_gids.insert(calo_gid);
-
-        // // Increment signal hit ID:
-        // signal_id++;
-        // std::clog << "Time stop : " << signal_time << std::endl;
-        // std::clog << "Energy    : " << energy_deposit << std::endl;
-        // std::clog << "Amplitude : " << amplitude << std::endl;
-        // std::clog << "GID       : " << calo_gid << std::endl;
       }
 
       // Merge signals which are in the same calo block (thanks to GID) :
@@ -351,7 +344,6 @@ namespace snemo {
           sim_signal.set_category(get_signal_category());
           sim_signal.set_time_ref(event_time_ref);
           sim_signal.set_shape_type_id("mctools::signal::multi_signal_shape");
-          sim_signal.set_time_ref(event_time_ref);
           datatools::properties multi_signal_config;
           // Traverse the collection of atomic signals with the same GID:
           std::vector<std::string> component_labels;
