@@ -26,6 +26,24 @@ geiger drift cells...
 ![asb-img-workflow-1](./images/img-workflow-1.png?raw=true)
 
 
-The ...
+The model of  analog signal are objects that contains all informations
+needed to generate, on demand, a functor object which associates
+a given time to a signal amplitude (Volt). Such an object
+is invoked by the digitization module in order to compute
+the trigger primitives associated to hits in the detector
+(timestamp, crossing of threshold) as well as the sampled waveform
+and its associated properties (charge, amplitude...).
+The functor object and/or the shape
+of the analog signal is not stored by itself in the output data, because
+it would be inefficient and expensive (in terms of storage)
+to use this approach. The stored informations  generally consist in
+a limited set of parameters (identifier of the shape model,
+start time of the signal, its risetime and falltime, the peak amplitude...).
+Piled-up signals (summed-up signal with delay) are also supported though
+dedicated *multi/combined-signal* objects.
+
+The figure below illustrates the typical structure of a modeled analog signal
+with its caracteristics and also the functor *f(t)* which can be instantiated
+and used  at digitization stage:
 
 ![asb-img-analog-signal-1](./images/img-analog-signal-1.png?raw=true)
