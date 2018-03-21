@@ -7,8 +7,8 @@
 #define FALAISE_ASB_PLUGIN_SNEMO_ASB_CALO_SIGNAL_GENERATOR_DRIVER_H
 
 // Standard library:
-#include <memory>
 #include <string>
+#include <memory>
 
 // Third party:
 // - Boost:
@@ -19,71 +19,100 @@
 
 namespace snemo {
 
-namespace asb {
+  namespace asb {
 
-/// \brief Calorimeter signal generator driver
-class calo_signal_generator_driver : public base_signal_generator_driver,
-                                     private boost::noncopyable {
- public:
-  /// \brief Driver mode
-  enum mode_type {
-    MODE_INVALID = 0,  ///< Invalid mode
-    MODE_TRIANGLE = 1  ///< Simplified mode with triangular shape signals
-    // MODE_XXX = 2, ///< XXX mode with realistic shape signals
-  };
+    /// \brief Calorimeter signal generator driver
+    class calo_signal_generator_driver
+      : public base_signal_generator_driver
+      , private boost::noncopyable
+    {
+    public:
 
-  /// Constructor
-  calo_signal_generator_driver(const std::string& id_ = "calo");
+      /// \brief Driver model
+      enum model_type {
+        MODEL_INVALID  = 0, ///< Invalid model
+        MODEL_TRIANGLE = 1  ///< Simplified model with triangular shape signals
+        // MODEL_XXX = 2,   ///< XXX model with realistic shape signals
+      };
 
-  /// Constructor
-  calo_signal_generator_driver(const mode_type mode_, const std::string& id_ = "calo");
+      /// Constructor
+      calo_signal_generator_driver(const std::string & id_ = "");
 
-  /// Destructor
-  virtual ~calo_signal_generator_driver();
+      /// Constructor
+      calo_signal_generator_driver(const model_type model_,
+                                   const std::string & id_ = "");
 
-  /// Set the driver mode
-  void set_mode(const mode_type);
+      /// Destructor
+      virtual ~calo_signal_generator_driver();
 
-  /// Return the driver mode
-  mode_type get_mode() const;
+      /// Set the driver model
+      void set_model(const model_type);
 
- protected:
-  /// Initialize the algorithm through configuration properties
-  virtual void _initialize(const datatools::properties& config_);
+      /// Return the driver model
+      model_type get_model() const;
 
-  /// Reset the algorithm
-  virtual void _reset();
+      /// Set the rise time
+      void set_rise_time(const double rise_time_);
 
-  /// Convert the calo energy hit into amplitude
-  double _convert_energy_to_amplitude(const double energy_);
+      double get_rise_time() const;
 
-  /// Run the algorithm
-  void _process(const mctools::simulated_data& sim_data_,
-                mctools::signal::signal_data& sim_signal_data_);
+      /// Set the fall time
+      void set_fall_time(const double fall_time_);
 
-  // Smart print
-  void _tree_dump(std::ostream& out_ = std::clog, const std::string& title_ = "",
-                  const std::string& indent_ = "", bool inherit_ = false) const;
+      double get_fall_time() const;
 
- private:
-  /// Run the triangle mode process
-  void _process_triangle_mode_(const mctools::simulated_data& sim_data_,
-                               mctools::signal::signal_data& sim_signal_data_);
+      /// Set the energy/amplitude conversion factor
+      void set_energy_amplitude_factor(const double factor_);
 
- private:
-  mode_type _mode_ = MODE_INVALID;  //!< Mode type for calo signals
-};
+      /// Return the energy/amplitude conversion factor
+      double get_energy_amplitude_factor() const;
 
-}  // end of namespace asb
+    protected :
 
-}  // end of namespace snemo
+      /// Initialize the algorithm through configuration properties
+      virtual void _initialize(const datatools::properties & config_);
+
+      /// Reset the algorithm
+      virtual void _reset();
+
+      /// Convert the calo energy hit into amplitude
+      double _convert_energy_to_amplitude(const double energy_);
+
+      /// Run the algorithm
+      void _process(const mctools::simulated_data & sim_data_,
+                    mctools::signal::signal_data & sim_signal_data_);
+
+      // Smart print
+      void _tree_dump(std::ostream & out_ = std::clog,
+                      const std::string & indent_ = "") const;
+
+    private:
+
+      void _set_defaults_();
+
+      /// Run the triangle model process
+      void _process_triangle_model_(const mctools::simulated_data & sim_data_,
+                                   mctools::signal::signal_data & sim_signal_data_);
+
+    private:
+
+      model_type _model_ = MODEL_INVALID; //!< Model type for PMT signals
+      double _rise_time_;                 //!< Characteristic rise time for PMT signals
+      double _fall_time_;                 //!< Characteristic fall time for PMT signals
+      double _energy_amplitude_factor_;   //!< Energy-signal amplitude conversion factor
+
+    };
+
+  } // end of namespace asb
+
+} // end of namespace snemo
 
 #include <datatools/ocd_macros.h>
 
 // Declare the OCD interface of the module
 DOCD_CLASS_DECLARATION(snemo::asb::calo_signal_generator_driver)
 
-#endif  // FALAISE_ASB_PLUGIN_SNEMO_ASB_CALO_SIGNAL_GENERATOR_DRIVER_H
+#endif // FALAISE_ASB_PLUGIN_SNEMO_ASB_CALO_SIGNAL_GENERATOR_DRIVER_H
 
 // Local Variables: --
 // mode: c++ --
