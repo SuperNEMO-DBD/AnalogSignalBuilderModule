@@ -24,3 +24,8 @@ detectors and contexts:  signal from optical module  hits, signal from
 geiger drift cells...
 
 ![asb-img-workflow-1](./images/img-workflow-1.png?raw=true)
+
+
+The ...
+
+![asb-img-analog-signal-1](./images/img-analog-signal-1.png?raw=true)
