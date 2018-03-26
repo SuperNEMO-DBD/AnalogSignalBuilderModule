@@ -43,16 +43,33 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/source/falaise)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/source/falaise)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/source)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/source)
+#include_directories(${Falaise_INCLUDE_DIRS})
 include_directories(${Bayeux_INCLUDE_DIRS})
 
 # - Prepare files from skelettons:
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/version.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/source/falaise/snemo/asb/version.h
   @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/resource.cc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/source/falaise/snemo/asb/resource.cc
+  @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/flasb.cc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/source/falaise/snemo/asb/flasb.cc
+  @ONLY)
+
+# - Generate binreloc header/source with mangled names, ensuring first
+# character(s) are a valid for a C identifier
+string(RANDOM LENGTH 13 MANGLE_BINRELOC_MAIN)
+set(MANGLE_BINRELOC "MBFLASB${MANGLE_BINRELOC_MAIN}")
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/flasb_binreloc.h.in ${CMAKE_CURRENT_BINARY_DIR}/source/falaise/snemo/asb/flasb_binreloc.h @ONLY)
 
 # - Headers:
 list(APPEND FalaiseAnalogSignalBuilderPlugin_HEADERS
+  ${CMAKE_CURRENT_BINARY_DIR}/source/falaise/snemo/asb/flasb_binreloc.h
   ${CMAKE_CURRENT_BINARY_DIR}/source/falaise/snemo/asb/version.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/resource.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/flasb.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/detail/flasb_sys.h
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/utils.h
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/base_signal_generator_driver.h
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/analog_signal_builder_module.h
@@ -61,7 +78,11 @@ list(APPEND FalaiseAnalogSignalBuilderPlugin_HEADERS
 
 # - Sources:
 list(APPEND FalaiseAnalogSignalBuilderPlugin_SOURCES
+  ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/flasb_binreloc.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/version.cc
+  ${CMAKE_CURRENT_BINARY_DIR}/source/falaise/snemo/asb/resource.cc
+  ${CMAKE_CURRENT_BINARY_DIR}/source/falaise/snemo/asb/flasb.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/detail/flasb_sys.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/utils.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/base_signal_generator_driver.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/analog_signal_builder_module.cc
@@ -80,8 +101,7 @@ target_include_directories(Falaise_AnalogSignalBuilder
     ${PROJECT_SOURCE_DIR}/source/falaise
   )
 
-target_link_libraries(Falaise_AnalogSignalBuilder PUBLIC Falaise::Falaise)
-### target_link_libraries(Falaise_AnalogSignalBuilder FalaiseModule)
+target_link_libraries(Falaise_AnalogSignalBuilder PUBLIC Falaise::FalaiseModule)
 
 # target_compile_features(Falaise_AnalogSignalBuilder PUBLIC ${FALAISE_CXX_COMPILE_FEATURES})
 # target_compile_definitions(Falaise_AnalogSignalBuilder PRIVATE ENABLE_BINRELOC)
@@ -104,7 +124,10 @@ if(APPLE)
 endif()
 
 # Install it:
+message( DEBUG "CMAKE_INSTALL_DATADIR = ${CMAKE_INSTALL_DATADIR}")
 install(TARGETS Falaise_AnalogSignalBuilder DESTINATION ${CMAKE_INSTALL_LIBDIR}/Falaise/modules)
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/resources/modules
+  DESTINATION ${CMAKE_INSTALL_DATADIR})
 
 # Test support:
 option(FalaiseAnalogSignalBuilderPlugin_ENABLE_TESTING "Build unit testing system for FalaiseAnalogSignalBuilder" ON)

@@ -17,8 +17,7 @@ function my_usage()
 
 Options:
 
-   --help               : print help
-   --falaise-root PATH  : set the Falaise installation base directory
+   --help               : Print help
 
 EOF
     return

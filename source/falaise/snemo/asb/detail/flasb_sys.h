@@ -1,24 +1,24 @@
-//! \file    falaise/detail/flasb_sys.h
-//! \brief   Provide Falaise library system singleton
+//! \file    snemo/asb/detail/flasb_sys.h
+//! \brief   Provide ASB Falaise plugin system singleton
 //! \details
 //
-// Copyright (c) 2017 by Francois Mauger <mauger@lpccaen.in2p3.fr>
-// Copyright (c) 2017 by Université de Caen Normandie
+// Copyright (c) 2018 by Francois Mauger <mauger@lpccaen.in2p3.fr>
+// Copyright (c) 2018 by Université de Caen Normandie
 //
-// This file is part of Falaise.
+// This file is part of ASB Falaise plugin.
 //
-// Falaise is free software: you can redistribute it and/or modify
+// ASB Falaise plugin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// Falaise is distributed in the hope that it will be useful,
+// ASB Falaise plugin is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Falaise.  If not, see <http://www.gnu.org/licenses/>.
+// along with ASB Falaise plugin.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifndef FALAISE_ASB_PLUGIN_SNEMO_ASB_DETAIL_FLASB_SYS_H
 #define FALAISE_ASB_PLUGIN_SNEMO_ASB_DETAIL_FLASB_SYS_H
@@ -32,6 +32,7 @@
 // This project:
 #include <datatools/logger.h>
 #include <datatools/service_manager.h>
+#include <datatools/i_tree_dump.h>
 
 namespace snemo {
 
@@ -41,77 +42,85 @@ namespace snemo {
 
       //! \brief ASB module system singleton
       class flasb_sys
-	: private boost::noncopyable {
+        : public datatools::i_tree_dumpable
+        , private boost::noncopyable {
 
       public:
 
-	/// Return the name of the Falaise library URN database service for supported setups (geometry,
-	/// simulation...)
-	static const std::string & fl_setup_db_name();
+        /// Return the name of the ASB Falaise plugin URN database service for supported setups (geometry,
+        /// simulation...)
+        static const std::string & flasb_setup_db_name();
 
-	/// Return the name of the Falaise library URN to resource path resolver service
-	static const std::string & fl_resource_resolver_name();
+        /// Return the name of the ASB Falaise plugin URN to resource path resolver service
+        static const std::string & flasb_resource_resolver_name();
 
-	/// Extract the verbosity from the FLASB_SYS_LOGGING environment variable (if any)
-	static datatools::logger::priority process_logging_env();
+        /// Extract the verbosity from the FLASB_SYS_LOGGING environment variable (if any)
+        static datatools::logger::priority process_logging_env();
 
-	/// Default constructor
-	flasb_sys();
+        /// Default constructor
+        flasb_sys();
 
-	/// Destructor
-	virtual ~flasb_sys();
+        /// Destructor
+        virtual ~flasb_sys();
 
-	/// Return the logging priority
-	datatools::logger::priority get_logging() const;
+        /// Return the logging priority
+        datatools::logger::priority get_logging() const;
 
-	/// Check initialization flag
-	bool is_initialized() const;
+        /// Set the logging priority
+        void set_logging(const datatools::logger::priority);
 
-	/// Initialize
-	void initialize();
+        /// Check initialization flag
+        bool is_initialized() const;
 
-	/// Shutdown
-	void shutdown();
+        /// Initialize
+        void initialize();
 
-	/// Return a mutable reference to the embedded service manager
-	datatools::service_manager & grab_services();
+        /// Shutdown
+        void shutdown();
 
-	/// Return a non mutable reference to the embedded service manager
-	const datatools::service_manager & get_services() const;
+        /// Return a mutable reference to the embedded service manager
+        datatools::service_manager & grab_services();
 
-	/// Check if the Falaise system singleton is instantiated
-	static bool is_instantiated();
+        /// Return a non mutable reference to the embedded service manager
+        const datatools::service_manager & get_services() const;
 
-	/// Return a mutable reference to the Falaise system singleton instance
-	static flasb_sys & instance();
+        /// Check if the ASB Falaise plugin system singleton is instantiated
+        static bool is_instantiated();
 
-	/// Return a non-mutable reference to the Falaise system singleton instance
-	static const flasb_sys & const_instance();
+        /// Return a mutable reference to the ASB Falaise plugin system singleton instance
+        static flasb_sys & instance();
 
-	/// Instantiate the Falaise system singleton
-	static flasb_sys & instantiate();
+        /// Return a non-mutable reference to the ASB Falaise plugin system singleton instance
+        static const flasb_sys & const_instance();
 
-      private:
+        /// Instantiate the ASB Falaise plugin system singleton
+        static flasb_sys & instantiate();
 
-	void _libinfo_registration_();
-
-	void _libinfo_deregistration_();
-
-	void _initialize_urn_services_();
-
-	void _shutdown_urn_services_();
+        // Smart print
+        void print_tree(std::ostream & out_ = std::clog,
+                        const boost::property_tree::ptree & options_ = empty_options()) const;
 
       private:
 
-	// Management:
-	bool _initialized_ = false;             //!< Initialization flag
-	datatools::logger::priority _logging_;  //!< Logging priority threshold
+        void _libinfo_registration_();
 
-	// Working internal data:
-	datatools::service_manager _services_;  //!< Embedded services
+        void _libinfo_deregistration_();
 
-	// Singleton:
-	static flasb_sys * _instance_;  //!< Falaise system singleton handle
+        void _initialize_urn_services_();
+
+        void _shutdown_urn_services_();
+
+      private:
+
+        // Management:
+        bool _initialized_ = false;             //!< Initialization flag
+        datatools::logger::priority _logging_;  //!< Logging priority threshold
+
+        // Working internal data:
+        datatools::service_manager _services_;  //!< Embedded services
+
+        // Singleton:
+        static flasb_sys * _instance_;  //!< ASB Falaise plugin system singleton handle
 
       };
 

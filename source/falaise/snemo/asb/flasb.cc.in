@@ -1,0 +1,127 @@
+// snemo/asb/flasb.cc
+//
+// Copyright (c) 2018 by  F. Mauger <mauger@lpccaen.in2p3.fr>
+//
+// This file is part of ASB Falaise plugin.
+//
+// ASB Falaise plugin is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// ASB Falaise plugin is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with ASB Falaise plugin.  If not, see <http://www.gnu.org/licenses/>.
+
+// Ourselves:
+#include "snemo/asb/flasb.h"
+
+// Standard library:
+#include <iostream>
+#include <cstdint>
+
+// Third party:
+// - Bayeux/datatools
+#include <bayeux/datatools/exception.h>
+// Mute some specific "shadow" warnings in Boost <=1.55:
+#if defined (__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
+#endif
+#if defined (__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
+#endif
+#include <bayeux/datatools/kernel.h>
+#if defined (__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+#if defined (__clang__)
+#pragma clang diagnostic pop
+#endif
+
+// This project;
+#include "snemo/asb/detail/flasb_sys.h"
+#include "snemo/asb/resource.h"
+
+namespace {
+
+  static bool _flasbinit = false;
+
+  void flasb_initialize_impl()
+  {
+    ::datatools::logger::priority logging = ::snemo::asb::detail::flasb_sys::process_logging_env();
+    DT_LOG_TRACE_ENTERING(logging);
+    snemo::asb::init_resources();
+
+    DT_THROW_IF(!datatools::kernel::is_instantiated(),
+                std::runtime_error,
+                "The Bayeux/datatools' kernel is not instantiated !");
+
+    // Populate the library info register, basically dumb if we don't
+    // have it so assume it exists and hope for an exception if
+    // it doesn't
+    if (!::snemo::asb::detail::flasb_sys::is_instantiated()) {
+      DT_LOG_TRACE(logging, "Instantiating ASB Falaise plugin system singleton...");
+      ::snemo::asb::detail::flasb_sys & flasbSys
+          = ::snemo::asb::detail::flasb_sys::instantiate();
+      DT_LOG_TRACE(logging, "Initializing ASB Falaise plugin system singleton with specific internals...");
+      flasbSys.initialize();
+    }
+    DT_LOG_TRACE_EXITING(logging);
+  }
+
+  void flasb_terminate_impl()
+  {
+    ::datatools::logger::priority logging = ::snemo::asb::detail::flasb_sys::process_logging_env();
+    DT_LOG_TRACE_ENTERING(logging);
+    if (::snemo::asb::detail::flasb_sys::is_instantiated()) {
+      DT_LOG_TRACE(logging, "Shutdown ASB Falaise plugin system singleton specific internals...");
+      ::snemo::asb::detail::flasb_sys & flasbSys
+          = ::snemo::asb::detail::flasb_sys::instance();
+      flasbSys.shutdown();
+      DT_LOG_TRACE(logging, "ASB Falaise plugin system singleton have been terminated.");
+    }
+    DT_LOG_TRACE_EXITING(logging);
+  }
+
+}
+
+namespace snemo {
+
+  namespace asb {
+
+    void initialize(int argc_, char * argv_[], uint32_t flags_)
+    {
+      if (! ::_flasbinit) {
+        // Initialization code from Falaise itself:
+        flasb_initialize_impl();
+        ::_flasbinit = true;
+      } else {
+        DT_THROW(std::logic_error,
+                 "Attempt to initialize the already initialized ASB Falaise plugin library!");
+      }
+      return;
+    }
+
+    void terminate()
+    {
+      if (::_flasbinit) {
+        // Termination code for Falaise:
+        flasb_terminate_impl();
+
+        ::_flasbinit = false;
+      } else {
+        DT_THROW(std::logic_error,
+                 "Attempt to terminate the already terminated ASB Falaise plugin library!");
+      }
+      return;
+    }
+
+  } // namespace asb
+
+} // namespace snemo

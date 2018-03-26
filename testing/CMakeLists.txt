@@ -3,6 +3,7 @@ set(FalaiseAnalogSignalBuilderPlugin_TESTS
   test_version.cxx
   test_calo_signal_generator_driver.cxx
   test_drivers.cxx
+  test_flasb.cxx
   # test_analog_signal_builder_module.cxx
  )
 
@@ -12,13 +13,16 @@ set(FalaiseAnalogSignalBuilderPlugin_TESTS
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 set(_FalaiseAnalogSignalBuilderPlugin_TEST_ENVIRONMENT
   "FALAISE_ASB_TESTING_DIR=${CMAKE_CURRENT_SOURCE_DIR}"
+  "FALAISE_ASB_SYS_LOGGING=trace"
   )
 
 foreach(_testsource ${FalaiseAnalogSignalBuilderPlugin_TESTS})
   get_filename_component(_testname ${_testsource} NAME_WE)
   set(_testname "falaise-asb-plugin-${_testname}")
   add_executable(${_testname} ${_testsource})
-  target_link_libraries(${_testname} Falaise_AnalogSignalBuilder)
+  target_link_libraries(${_testname}
+    Falaise_AnalogSignalBuilder
+    Falaise::Falaise)
   # - On Apple, ensure dynamic_lookup of undefined symbols
   if(APPLE)
     set_target_properties(${_testname} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")

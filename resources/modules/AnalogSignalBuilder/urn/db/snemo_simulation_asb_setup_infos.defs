@@ -1,0 +1,22 @@
+# -*- mode: conf-unix; -*-
+
+#@description Definition list of URNs for SuperNEMO demonstrator simulation's ASB module setup
+#@key_label  "urn"
+#@meta_label "category"
+
+
+############
+# TAG 0.1  #
+############
+
+###############################################################
+[urn="urn:snemo:simulation:asb:config:0.1" category="simsetup"]
+
+#@config URN registration of ASB module setup (tag 0.1) for SuperNEMO demonstrator simulation
+description : string = "ASB module setup (tag 0.1) for SuperNEMO demonstrator simulation"
+
+topics : string[1] = "setup"
+topic.setup.component : string  = "urn:snemo:demonstrator:setup:1.0"
+
+
+# end
