@@ -88,13 +88,14 @@ namespace {
   //! Return relative path from application directory to root of resource dir
   std::string relativePathToResourceDir()
   {
-    return "@FLASB_LIBDIR_TO_RESOURCEDIR@";
+    return "@FalaiseASB_LIBDIR_TO_RESOURCEDIR@";
   }
 
   std::string getLibraryDir()
   {
     char* exePath(0);
     exePath = br_find_exe_dir("");
+    std::cerr << "[debug] exePath = " << exePath << std::endl;
     boost::filesystem::path sExePath(exePath);
     free(exePath);
     boost::filesystem::path cExePath = boost::filesystem::canonical(sExePath);
@@ -123,10 +124,20 @@ namespace snemo {
 
     std::string get_resource_dir()
     {
-      boost::filesystem::path tmpPath(getLibraryDir());
-      tmpPath /= relativePathToResourceDir();
-      boost::filesystem::path absPath = boost::filesystem::canonical(tmpPath);
-      return absPath.string();
+      std::string dir;
+      char * flasb_resource_dir_env = 0;
+      if (flasb_resource_dir_env = getenv("FALAISE_ASB_RESOURCE_DIR")) {
+        std::cerr << "[debug] snemo::asb::get_resource_dir: "
+                  << "using resource dir from FALAISE_ASB_RESOURCE_DIR var..." << std::endl;
+        dir = std::string(flasb_resource_dir_env);
+      } else {
+        boost::filesystem::path tmpPath(getLibraryDir());
+        tmpPath /= relativePathToResourceDir();
+        boost::filesystem::path absPath = boost::filesystem::canonical(tmpPath);
+        dir = absPath.string();
+      }
+      std::cerr << "[debug] snemo::asb::get_resource_dir: dir = " << dir << std::endl;
+      return dir;
     }
 
     std::string get_resource(const std::string & rname_)

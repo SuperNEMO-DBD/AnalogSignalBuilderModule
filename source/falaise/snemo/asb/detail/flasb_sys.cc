@@ -240,8 +240,15 @@ namespace snemo {
                                       snemo::asb::version::get_version());
 
           // Register the ASB Falaise plugin resource path in the datatools' kernel:
+          DT_LOG_TRACE(_logging_,
+                       "Registration of the ASB Falaise plugin resource path : '"
+                       << snemo::asb::get_resource_dir() << "'");
           flasb_lib_infos.store_string(datatools::library_info::keys::install_resource_dir(),
                                        snemo::asb::get_resource_dir());
+
+          // Would it be useful to add this ???
+          // flasb_lib_infos.store_string(datatools::library_info::keys::install_lib_dir(),
+          //                              snemo::asb::get_lib_dir());
 
           // If the 'FALAISE_ASB_RESOURCE_DIR' environment variable is set, it will supersede
           // the official registered resource path above through the 'datatools::fetch_path_with_env'
@@ -298,9 +305,9 @@ namespace snemo {
           DT_THROW_IF(!datatools::kernel::instance().get_urn_query().has_db(falaise::detail::falaise_sys::fl_setup_db_name()),
                       std::runtime_error,
                       "Cannot find Falaise's URN db service in Bayeux/datatools' kernel!");
-          const datatools::urn_db_service & flUrnDb =
+          const datatools::urn_db_service & flSetupUrnDb =
             datatools::kernel::instance().get_urn_query().get_db(falaise::detail::falaise_sys::fl_setup_db_name());
-          urnSetupDb.connect_db(flUrnDb);
+          urnSetupDb.connect_db(flSetupUrnDb);
 
           //datatools::kernel::instance().grab_urn_query().add_db(*this, flasb_setup_db_name());
           std::string urn_db_conf_file = "@flasb:urn/db/snemo_asb_setup_db.conf";
@@ -313,6 +320,7 @@ namespace snemo {
           }
           DT_LOG_TRACE(_logging_, "Publishing the URN info DB '"
                        << urnSetupDb.get_name() << "' to the Bayeux/datatools' kernel...");
+          urnSetupDb.lock();
           urnSetupDb.kernel_push();
           DT_LOG_TRACE(_logging_, "URN info DB has been plugged in the Bayeux/datatools' kernel.");
         }
@@ -369,6 +377,7 @@ namespace snemo {
                        << urnSetupDb.get_name()
                        << "' from the  Bayeux/datatools's kernel...");
           urnSetupDb.kernel_pop();
+          urnSetupDb.unlock();
           DT_LOG_TRACE(_logging_,
                        "URN info setup DB has been removed from the  Bayeux/datatools kernel.");
           urnSetupDb.reset();

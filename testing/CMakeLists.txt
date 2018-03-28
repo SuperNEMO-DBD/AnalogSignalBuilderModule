@@ -12,10 +12,12 @@ set(FalaiseAnalogSignalBuilderPlugin_TESTS
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 set(_FalaiseAnalogSignalBuilderPlugin_TEST_ENVIRONMENT
+  "FALAISE_ASB_RESOURCE_DIR=${PROJECT_SOURCE_DIR}/resources/modules/AnalogSignalBuilder"
   "FALAISE_ASB_TESTING_DIR=${CMAKE_CURRENT_SOURCE_DIR}"
   "FALAISE_ASB_SYS_LOGGING=trace"
   )
 
+message(STATUS "[DEBUG] TEST_ENVIRONMENT= ${_FalaiseAnalogSignalBuilderPlugin_TEST_ENVIRONMENT}")
 foreach(_testsource ${FalaiseAnalogSignalBuilderPlugin_TESTS})
   get_filename_component(_testname ${_testsource} NAME_WE)
   set(_testname "falaise-asb-plugin-${_testname}")

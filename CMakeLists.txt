@@ -18,6 +18,20 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
   message(FATAL_ERROR "in-source build detected")
 endif()
 
+# - Validate that certain paths are relative, otherwise relocation may fail
+foreach(_dir BINDIR LIBDIR INCLUDEDIR DATAROOTDIR)
+  if(IS_ABSOLUTE "${CMAKE_INSTALL_${_dir}}")
+    message(FATAL_ERROR "Absolute path for CMAKE_INSTALL_${_dir} not allowed")
+  endif()
+endforeach()
+
+message(STATUS "[DEBUG] CMAKE_INSTALL_BINDIR      = ${CMAKE_INSTALL_BINDIR}")
+message(STATUS "[DEBUG] CMAKE_INSTALL_LIBDIR      = ${CMAKE_INSTALL_LIBDIR}")
+message(STATUS "[DEBUG] CMAKE_INSTALL_INCLUDEDIR  = ${CMAKE_INSTALL_INCLUDEDIR}")
+message(STATUS "[DEBUG] CMAKE_INSTALL_DATAROOTDIR = ${CMAKE_INSTALL_DATAROOTDIR}")
+message(STATUS "[DEBUG] CMAKE_INSTALL_FULL_LIBDIR      = ${CMAKE_INSTALL_FULL_LIBDIR}")
+message(STATUS "[DEBUG] CMAKE_INSTALL_FULL_DATAROOTDIR = ${CMAKE_INSTALL_FULL_DATAROOTDIR}")
+
 # - Load Custom Modules
 # list(INSERT CMAKE_MODULE_PATH 0 ${PROJECT_SOURCE_DIR}/cmake)
 
@@ -26,16 +40,20 @@ set(FalaiseASB_VERSION_MINOR 1)
 set(FalaiseASB_VERSION_PATCH 0)
 set(FalaiseASB_VERSION_REVISION 0)
 set(FalaiseASB_VERSION "${FalaiseASB_VERSION_MAJOR}.${FalaiseASB_VERSION_MINOR}.${FalaiseASB_VERSION_PATCH}")
-message( STATUS "ASB version : ${FalaiseASB_VERSION}")
+message( STATUS "[DEBUG] ASB version : ${FalaiseASB_VERSION}")
 
-# # - ROOT
-# # find_package(ROOT 5.34.00 REQUIRED Gui Geom GeomPainter Physics)
-# set(ROOT_COMPONENTS Gui Gpad Geom GeomPainter Physics Graf Graf3d)
-# find_package(ROOT 5.34.00 QUIET COMPONENTS ${ROOT_COMPONENTS} NO_MODULE)
-# find_package(ROOT 5.34.00 REQUIRED ${ROOT_COMPONENTS})
+# Resources directories based on name-version subdirs
+set(FalaiseASB_TAG "FalaiseASB-${FalaiseASB_VERSION}")
+file(RELATIVE_PATH FalaiseASB_LIBDIR_TO_RESOURCEDIR
+  "${CMAKE_INSTALL_FULL_LIBDIR}"
+  "${CMAKE_INSTALL_FULL_DATAROOTDIR}/${FalaiseASB_TAG}/resources")
+# file(RELATIVE_PATH FalaiseASB_CMAKEDIR_TO_INCLUDEDIR
+#   "${CMAKE_INSTALL_FULL_CMAKEDIR}/${FalaiseASB_TAG}"
+#   "${CMAKE_INSTALL_FULL_INCLUDEDIR}")
+message( STATUS "[DEBUG] FalaiseASB_LIBDIR_TO_RESOURCEDIR : ${FalaiseASB_LIBDIR_TO_RESOURCEDIR}")
 
 find_package(Falaise 3.1)
-message( STATUS "Falaise ${Falaise_VERSION} was found")
+message( STATUS "[DEBUG] Falaise ${Falaise_VERSION} was found")
 
 ############################################################################################
 # - AnalogSignalBuilder modules:
@@ -124,10 +142,9 @@ if(APPLE)
 endif()
 
 # Install it:
-message( DEBUG "CMAKE_INSTALL_DATADIR = ${CMAKE_INSTALL_DATADIR}")
 install(TARGETS Falaise_AnalogSignalBuilder DESTINATION ${CMAKE_INSTALL_LIBDIR}/Falaise/modules)
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/resources/modules
-  DESTINATION ${CMAKE_INSTALL_DATADIR})
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/resources/modules/AnalogSignalBuilder/
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/Falaise/resources/modules/AnalogSignalBuilder)
 
 # Test support:
 option(FalaiseAnalogSignalBuilderPlugin_ENABLE_TESTING "Build unit testing system for FalaiseAnalogSignalBuilder" ON)
@@ -135,3 +152,5 @@ if(FalaiseAnalogSignalBuilderPlugin_ENABLE_TESTING)
   enable_testing()
   add_subdirectory(testing)
 endif()
+
+# - end
