@@ -92,6 +92,7 @@ list(APPEND FalaiseAnalogSignalBuilderPlugin_HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/base_signal_generator_driver.h
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/analog_signal_builder_module.h
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/calo_signal_generator_driver.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/tracker_signal_generator_driver.h
   )
 
 # - Sources:
@@ -105,6 +106,7 @@ list(APPEND FalaiseAnalogSignalBuilderPlugin_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/base_signal_generator_driver.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/analog_signal_builder_module.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/calo_signal_generator_driver.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/tracker_signal_generator_driver.cc
   )
 
 ############################################################################################
