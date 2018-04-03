@@ -13,6 +13,8 @@
 // - Bayeux/dpp:
 #include <dpp/input_module.h>
 #include <dpp/output_module.h>
+// - Bayeux/mygsl:
+#include <mygsl/rng.h>
 
 // Falaise:
 #include <falaise/falaise.h>
@@ -47,8 +49,6 @@ int main( int  argc_ , char **argv_  )
     // Parameters:
     params_type params;
 
-    // Parsing command line  arguments
-
     // Parse options:
     namespace po = boost::program_options;
     po::options_description opts("Allowed options");
@@ -59,7 +59,7 @@ int main( int  argc_ , char **argv_  )
        po::value<std::string>(& params.input_filename),
        "set an input file")
       ("number_of_events,n",
-       po::value<int>(& params.number_of_events)->default_value(10),
+       po::value<int>(& params.number_of_events)->default_value(5),
        "set the maximum number of events")
       ; // end of options description
 
@@ -148,6 +148,12 @@ void test_tsgd_3(const params_type & params_)
   std::string hit_category    = "gg";
   std::string signal_category = "sigtracker";
 
+  // PRNG :
+  int32_t seed = 314159;
+  mygsl::rng random_generator;
+  random_generator.initialize(seed);
+
+  // Geom manager :
   std::string manager_config_file;
   manager_config_file = "@falaise:config/snemo/demonstrator/geometry/4.0/manager.conf";
   datatools::fetch_path_with_env(manager_config_file);
@@ -163,6 +169,7 @@ void test_tsgd_3(const params_type & params_)
   my_manager.initialize (manager_config);
   my_manager.tree_dump(std::clog, "My geometry manager");
 
+  // Tracker signal driver :
   std::string tracker_signal_generator_config_filename
     = "${FALAISE_ASB_TESTING_DIR}/config/tracker_signal_generator.conf";
   datatools::fetch_path_with_env(tracker_signal_generator_config_filename);
@@ -172,6 +179,7 @@ void test_tsgd_3(const params_type & params_)
 
   snemo::asb::tracker_signal_generator_driver TSGD;
   TSGD.set_geo_manager(my_manager);
+  TSGD.set_external_random(random_generator);
   // TSGD.set_logging_priority(params_.logging)
   TSGD.initialize(tracker_signal_generator_config);
   TSGD.tree_dump(std::clog, "My tracker signal generator driver: ", "[info] ");
@@ -189,6 +197,7 @@ void test_tsgd_3(const params_type & params_)
   reader_config.store("files.mode", "single");
   reader_config.store("files.single.filename", SD_filename);
   reader.initialize_standalone(reader_config);
+
 
   // Event record :
   datatools::things ER;

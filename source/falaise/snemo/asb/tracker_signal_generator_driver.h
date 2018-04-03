@@ -18,7 +18,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Falaise/ASB plugin.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef FALAISE_ASB_PLUGIN_SNEMO_ASB_CALO_SIGNAL_GENERATOR_DRIVER_H
+#ifndef FALAISE_ASB_PLUGIN_SNEMO_ASB_TRACKER_SIGNAL_GENERATOR_DRIVER_H
 #define FALAISE_ASB_PLUGIN_SNEMO_ASB_TRACKER_SIGNAL_GENERATOR_DRIVER_H
 
 // Standard library:
@@ -29,8 +29,12 @@
 // - Boost:
 #include <boost/noncopyable.hpp>
 
+// - Bayeux/mygsl:
+#include <mygsl/rng.h>
+
 // This project:
 #include <snemo/asb/base_signal_generator_driver.h>
+#include <snemo/asb/geiger_analogic_regime.h>
 
 namespace snemo {
 
@@ -60,27 +64,38 @@ namespace snemo {
       /// Destructor
       virtual ~tracker_signal_generator_driver();
 
+			/// Set the external PRNG
+			void set_external_random(mygsl::rng& rng_);
+
+			/// Reset the external PRNG
+			void reset_external_random();
+
+			/// Check if the module use an external PRNG
+			bool has_external_random() const;
+
       /// Set the driver model
       void set_model(const model_type);
 
       /// Return the driver model
       model_type get_model() const;
 
-      // /// Set the rise time
-      // void set_rise_time(const double rise_time_);
+      /// Set the rise time
+      void set_rise_time(const double rise_time_);
 
-      // double get_rise_time() const;
+      /// Get the rise time
+      double get_rise_time() const;
 
-      // /// Set the fall time
-      // void set_fall_time(const double fall_time_);
+      /// Set the fall time
+      void set_fall_time(const double fall_time_);
 
-      // double get_fall_time() const;
+      /// Get the fall time
+      double get_fall_time() const;
 
-      // /// Set the energy/amplitude conversion factor
-      // void set_energy_amplitude_factor(const double factor_);
+      /// Set the amplitude
+      void set_amplitude(const double amplitude_);
 
-      // /// Return the energy/amplitude conversion factor
-      // double get_energy_amplitude_factor() const;
+      /// Return the amplitude
+      double get_amplitude() const;
 
     protected :
 
@@ -90,8 +105,8 @@ namespace snemo {
       /// Reset the algorithm
       virtual void _reset();
 
-      // /// Convert the tracker energy hit into amplitude
-      // double _convert_energy_to_amplitude(const double energy_);
+			/// Getting random number generator
+			mygsl::rng & _get_random();
 
       /// Run the algorithm
       void _process(const mctools::simulated_data & sim_data_,
@@ -112,10 +127,13 @@ namespace snemo {
 
     private:
 
-      model_type _model_ = MODEL_INVALID; //!< Model type for Geiger cells signals
-      // double _rise_time_;                 //!< Characteristic rise time for PMT signals
-      // double _fall_time_;                 //!< Characteristic fall time for PMT signals
-      // double _energy_amplitude_factor_;   //!< Energy-signal amplitude conversion factor
+      model_type _model_ = MODEL_INVALID;       //!< Model type for Geiger cells signals
+			mygsl::rng * _external_random_ = nullptr; //!< external PRN generator
+			geiger_analogic_regime _geiger_;          //!< Geiger analogic regime tools
+
+      double _rise_time_; //!< Characteristic rise time for GG cell signals
+      double _fall_time_; //!< Characteristic fall time for GG cell signals
+      double _amplitude_; //!< Characteristic amplitude time for GG cell anodic signal
 
     };
 
