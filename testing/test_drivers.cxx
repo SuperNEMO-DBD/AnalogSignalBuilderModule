@@ -18,7 +18,10 @@
 // - Bayeux/dpp:
 #include <dpp/input_module.h>
 #include <dpp/output_module.h>
+// - Bayeux/dpp:
 #include <mygsl/parameter_store.h>
+#include <mygsl/i_unary_function_with_derivative.h>
+
 // - Bayeux/geomtools:
 #include <geomtools/geomtools_config.h>
 #include <geomtools/gnuplot_draw.h>
@@ -197,14 +200,14 @@ void test_drivers_1(const params_type & params_)
             my_signal.get_auxiliaries().export_and_rename_starting_with(my_signal_shape_properties,
                                                                         mctools::signal::base_signal::shape_parameter_prefix(),
                                                                         "");
-            std::clog << "[info] Signal #" << isignal << ": " << std::endl;
+            // std::clog << "[info] Signal #" << isignal << ": " << std::endl;
             // my_signal.tree_dump(std::clog, "", "[info] ");
             // std::clog << "[info] |-- Shape type ID: '" << my_signal.get_shape_type_id() << "'" << std::endl;
             // std::clog << "[info] `-- Shape properties: " << std::endl;
             // my_signal_shape_properties.tree_dump(std::clog, "", "[info]     ");
             snemo::asb::build_shape(ssb1, my_signal);
           }
-          ssb1.tree_dump(std::clog, "Signal shape builder 1", "[info] ");
+          // ssb1.tree_dump(std::clog, "Signal shape builder 1", "[info] ");
 
           datatools::temp_file tmp_file;
           tmp_file.set_remove_at_destroy(false);
@@ -218,7 +221,7 @@ void test_drivers_1(const params_type & params_)
           for (const auto & fkey : fkeys) {
             const std::string & signal_name = fkey;
             if (snemo::asb::is_private_signal_name(signal_name)) continue;
-            std::clog << "[info] Computing signal shape '" << signal_name << "' for further plot..." << std::endl;
+            // std::clog << "[info] Computing signal shape '" << signal_name << "' for further plot..." << std::endl;
             tmp_file.out() << "#@shape=" << fkey << ":\n";
             ssb1.get_functor(fkey).write_ascii_with_units(tmp_file.out(),
                                                           -0.0 * CLHEP::nanosecond,
@@ -403,6 +406,7 @@ void test_drivers_2(const params_type & params_)
         std::clog << "[info] List of embedded signal categories:" << std::endl;
         for (const auto & sigcat : sigcats) {
           std::clog << "[info]  * SSD's signal category : '" << sigcat << "'" << std::endl;
+	  SSD.tree_dump(std::clog, "Signal Data");
         }
         if (SSD.has_signals(signal_category)) {
 
@@ -416,14 +420,32 @@ void test_drivers_2(const params_type & params_)
             my_signal.get_auxiliaries().export_and_rename_starting_with(my_signal_shape_properties,
                                                                         mctools::signal::base_signal::shape_parameter_prefix(),
                                                                         "");
-            std::clog << "[info] Signal #" << isignal << ": " << std::endl;
+            // std::clog << "[info] Signal #" << isignal << ": " << std::endl;
             // my_signal.tree_dump(std::clog, "", "[info] ");
             // std::clog << "[info] |-- Shape type ID: '" << my_signal.get_shape_type_id() << "'" << std::endl;
             // std::clog << "[info] `-- Shape properties: " << std::endl;
             // my_signal_shape_properties.tree_dump(std::clog, "", "[info]     ");
             snemo::asb::build_shape(ssb1, my_signal);
-          }
-          ssb1.tree_dump(std::clog, "Signal shape builder 1", "[info] ");
+
+	    // for (const auto & fkey : fkeys) { std::clog << "Fkey = " << fkey << std::endl;}
+
+
+	    // Derivative signal (to use in Digi part):
+	    // std::string key = "shape.2";
+	    // mygsl::unary_function_promoted_with_numeric_derivative deriv_signal;
+	    // deriv_signal.set_functor(ssb1.grab_functor(key));
+	    // // deriv_signal.tree_dump(std::clog);
+	    // std::string d_r_filename = "/tmp/deriv_signal.dat";
+	    // std::ofstream derivstream;
+	    // derivstream.open(d_r_filename);
+	    // for (double t = 0; t <= 50*CLHEP::microsecond; t+=0.1*CLHEP::microsecond)
+	    //   {
+	    // 	double d_amp = deriv_signal.eval_df(t);
+	    // 	derivstream << t / CLHEP::microsecond  << ' ' << d_amp * CLHEP::meter / CLHEP::volt << std::endl;
+	    //   }
+	    // derivstream.close();
+	    // ssb1.tree_dump(std::clog, "Signal shape builder 1", "[info] ");
+	  } // end of isignal
 
           datatools::temp_file tmp_file;
           tmp_file.set_remove_at_destroy(false);
@@ -431,18 +453,22 @@ void test_drivers_2(const params_type & params_)
           // Generate sampled shapes associated to signals:
           std::clog << "[info] Temp file : '" << tmp_file.get_filename() << "'" << std::endl;
 
+	  // Build the full list of all functors to construct signal shapes
           std::set<std::string> fkeys;
           ssb1.build_list_of_functors(fkeys);
+	  ssb1.tree_dump(std::clog);
+
+
           // Fill the temp file:
           for (const auto & fkey : fkeys) {
             const std::string & signal_name = fkey;
             if (snemo::asb::is_private_signal_name(signal_name)) continue;
-            std::clog << "[info] Computing signal shape '" << signal_name << "' for further plot..." << std::endl;
+            // std::clog << "[info] Computing signal shape '" << signal_name << "' for further plot..." << std::endl;
             tmp_file.out() << "#@shape=" << fkey << ":\n";
             ssb1.get_functor(fkey).write_ascii_with_units(tmp_file.out(),
                                                           -0.0 * CLHEP::microsecond,
                                                           +100.0 * CLHEP::microsecond,
-                                                          1024,
+                                                          3000,
                                                           CLHEP::microsecond,
                                                           CLHEP::volt,
                                                           16, 16

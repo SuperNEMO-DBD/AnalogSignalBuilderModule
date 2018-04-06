@@ -88,7 +88,7 @@ namespace snemo {
       double get_base_cathode_efficiency() const;
 
       /// Return the anode efficiency
-      double get_anode_efficiency(double r_) const;
+      double get_anode_efficiency(double r_, int mode_) const;
 
       /// Return the cathode efficiency
       double get_cathode_efficiency() const;
@@ -120,8 +120,11 @@ namespace snemo {
       /// Randomize the drift time from the drift distance of a Geiger hit
       double randomize_drift_time_from_drift_distance(mygsl::rng & ran_, double drift_distance_) const;
 
+      /// Compute the drift time from the drift distance of a Geiger hit
+      double compute_drift_time_from_drift_distance(double drift_distance_) const;
+
       /// Compute the drift radius from the drift time
-      double base_t_2_r(double time_, int mode_ = 0) const;
+      double base_t_2_r(double time_) const;
 
       /// Return the error on longitudinal position
       double get_sigma_z(double z_, size_t missing_cathodes_ = 0) const;
@@ -157,7 +160,7 @@ namespace snemo {
       double _sigma_plasma_longitudinal_speed_;  //!< Error on plasma longitudinal speed
 
       // internals:
-      mygsl::tabulated_function _base_rt_;   //!< Tabluated function for drift time<->drift radius association
+      mygsl::tabulated_function _base_rt_;   //!< Tabulated function for drift time<->drift radius association
       double _t0_;     //!< Time (not documented yet)
       double _r0_;     //!< Radius (not documented yet)
       double _rdiag_;  //!< Cut on drift radius (not documented yet)

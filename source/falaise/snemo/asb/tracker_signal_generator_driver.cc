@@ -197,20 +197,19 @@ namespace snemo {
     }
 
     void tracker_signal_generator_driver::_process(const mctools::simulated_data & sim_data_,
-						   mctools::signal::signal_data & sim_signal_data_)
+						   mctools::signal::signal_data  & sim_signal_data_)
     {
       DT_THROW_IF(!is_initialized(), std::logic_error, "Tracker signal generator driver is not initialized !");
       DT_THROW_IF(_model_ == MODEL_INVALID, std::logic_error, "Tracker signal generator driver model is invalid !");
       if (_model_ == MODEL_TRIANGLE_GATE)
 	{
-	  std::clog << "triangle gate " << std::endl;
 	  _process_triangle_gate_model_(sim_data_, sim_signal_data_);
 	}
       return;
     }
 
     void tracker_signal_generator_driver::_process_triangle_gate_model_(const mctools::simulated_data & sim_data_,
-									mctools::signal::signal_data & sim_signal_data_)
+									mctools::signal::signal_data  & sim_signal_data_)
     {
       // For the moment, each tracker hit is represented by a triangle gate.
 
@@ -220,15 +219,24 @@ namespace snemo {
 	  // No hit in the proper category:
 	  return;
 	}
-      const size_t number_of_tracker_hits = sim_data_.get_number_of_step_hits(hit_label);
 
       // pickup the ID mapping from the geometry manager:
       const geomtools::mapping& the_mapping = get_geo_manager().get_mapping();
 
-      _geiger_.tree_dump(std::clog, "The Geiger analogic regime");
+      // Temporary output in a file for check purpose
+      std::string temp_filename = "/tmp/anode_efficiency.dat";
+      std::ofstream temp_stream;
+      temp_stream.open(temp_filename);
+      for (double r = 0 * CLHEP::mm; r <= 35 * CLHEP::mm; r+=0.1 * CLHEP::mm)
+	{
+	  int mode = 1;
+	  double an_eff = _geiger_.get_anode_efficiency(r, mode);
+	  temp_stream << r  << ' ' << an_eff << std::endl;
+	}
+      temp_stream.close();
 
-      // WIP : is this really coherent for the event time reference ?
 
+      // WIP : is this really coherent for the event time reference for tracker ?
       // // Reference time of the event:
       // double event_time_ref;
       // datatools::invalidate(event_time_ref);
@@ -243,63 +251,87 @@ namespace snemo {
       // 	}
 
 
-      // New mutable (!already_hit) flaged sd bank :
-      // We have to flag the gg cells already hit before.
+      // For a given GID (Geiger cell), several hits can happen (pile-up)
+      // Only the first hit will produce a signal if the Geiger cell hasn't recovery it electric field (dead time)
+
+      // New mutable 'SD' bank is created (copy of the input SD) but degraded.
+      // We want to flag hits taking place between the 1st hit and the recovery dead time of the cell
       // Geiger dead time is taken into account and a given geiger cell can trigger again after 1 ms
-      // mctools::simulated_data flaged_sd = sim_data_;
 
-      // for (size_t ihit = 0; ihit < number_of_tracker_hits; ihit++)
-      // 	{
-      // 	  // Search the drift distance closer to the anodic wire.
-      // 	  // The first hit with the smallest drift distance will give a signal and then the cell is dead
-      // 	  // After the dead time recovery (1 ms), an other hit can give a new tracker signal
+      mctools::simulated_data flaged_SD = sim_data_;
+      const size_t total_number_of_tracker_hits = sim_data_.get_number_of_step_hits(hit_label);
 
-      // 	  mctools::base_step_hit & geiger_hit_1 = flaged_sd.grab_step_hit("gg", ihit);
+      for (size_t ihit = 0; ihit < total_number_of_tracker_hits; ihit++)
+      	{
+      	  // Search the drift distance closer to the anodic wire for a given cell
+      	  // The first hit with the smallest drift distance will give a signal and then the cell is dead
+      	  // After the dead time recovery (1 ms), an other hit can give a new tracker signal
 
-      // 	  for (size_t jhit = ihit + 1; jhit < number_of_tracker_hits; jhit++)
-      // 	    {
-      // 	      mctools::base_step_hit & geiger_hit_2 = flaged_sd.grab_step_hit("gg", jhit);
-      // 	      if (geiger_hit_1.get_geom_id() == geiger_hit_2.get_geom_id())
-      // 		{
-      // 		  const geomtools::vector_3d & ionization_gg_1 = geiger_hit_1.get_position_start();
-      // 		  const geomtools::vector_3d & avalanche_gg_1  = geiger_hit_1.get_position_stop();
-      // 		  const double drift_distance_gg_1 = (avalanche_gg_1 - ionization_gg_1).mag();
-      // 		  const double ionization_time_gg_1 = geiger_hit_1.get_time_start();
+      	  mctools::base_step_hit & GGH_1 = flaged_SD.grab_step_hit("gg", ihit);
 
-      // 		  const geomtools::vector_3d & ionization_gg_2 = geiger_hit_2.get_position_start();
-      // 		  const geomtools::vector_3d & avalanche_gg_2  = geiger_hit_2.get_position_stop();
-      // 		  const double drift_distance_gg_2 = (avalanche_gg_2 - ionization_gg_2).mag();
-      // 		  const double ionization_time_gg_2 = geiger_hit_2.get_time_start();
+      	  for (size_t jhit = ihit + 1; jhit < total_number_of_tracker_hits; jhit++)
+      	    {
+      	      mctools::base_step_hit & GGH_2 = flaged_SD.grab_step_hit("gg", jhit);
+      	      if (GGH_1.get_geom_id() == GGH_2.get_geom_id())
+      		{
+      		  const geomtools::vector_3d & ionization_gg_1 = GGH_1.get_position_start();
+      		  const geomtools::vector_3d & avalanche_gg_1  = GGH_1.get_position_stop();
+      		  const double drift_distance_gg_1 = (avalanche_gg_1 - ionization_gg_1).mag();
+      		  const double ionization_time_gg_1 = GGH_1.get_time_start();
+		  const double computed_drift_time_gg_1 = _geiger_.compute_drift_time_from_drift_distance(drift_distance_gg_1);
+		  const double anode_time_gg_1 = ionization_time_gg_1 + computed_drift_time_gg_1;
 
+      		  const geomtools::vector_3d & ionization_gg_2 = GGH_2.get_position_start();
+      		  const geomtools::vector_3d & avalanche_gg_2  = GGH_2.get_position_stop();
+      		  const double drift_distance_gg_2 = (avalanche_gg_2 - ionization_gg_2).mag();
+      		  const double ionization_time_gg_2 = GGH_2.get_time_start();
+		  const double computed_drift_time_gg_2 = _geiger_.compute_drift_time_from_drift_distance(drift_distance_gg_2);
+		  const double anode_time_gg_2 = ionization_time_gg_2 + computed_drift_time_gg_2;
 
-      // 		  // const double gg_hit_time       = geiger_hit.get_time_start();
-      // 		  // const double other_gg_hit_time = other_geiger_hit.get_time_start();
+      		  const double gg_hit_time       = anode_time_gg_1;
+      		  const double other_gg_hit_time = anode_time_gg_2;
 
-      // 		  // if (gg_hit_time > other_gg_hit_time && gg_hit_time < other_gg_hit_time + geiger_signal::GEIGER_DEAD_TIME)
-      // 		  //   {
-      // 		  //     bool geiger_already_hit = true;
-      // 		  //     if (!geiger_hit.get_auxiliaries().has_flag("geiger_already_hit")) geiger_hit.grab_auxiliaries().store("geiger_already_hit", geiger_already_hit);
-      // 		  //   }
-      // 		  // else if (other_gg_hit_time > gg_hit_time && other_gg_hit_time < gg_hit_time + geiger_signal::GEIGER_DEAD_TIME)
-      // 		  //   {
-      // 		  //     bool geiger_already_hit = true;
-      // 		  //     if (!other_geiger_hit.get_auxiliaries().has_flag("geiger_already_hit")) other_geiger_hit.grab_auxiliaries().store("geiger_already_hit", geiger_already_hit);
-      // 		  //   }
-      // 		}
-      // 	    }
-      // 	}
+      		  if (gg_hit_time > other_gg_hit_time && gg_hit_time < other_gg_hit_time + _geiger_.get_cell_dead_time())
+      		    {
+      		      bool geiger_already_hit = true;
+      		      if (!GGH_1.get_auxiliaries().has_flag("geiger_already_hit")) GGH_1.grab_auxiliaries().store("geiger_already_hit", geiger_already_hit);
+      		    }
+      		  else if (other_gg_hit_time > gg_hit_time && other_gg_hit_time < gg_hit_time + _geiger_.get_cell_dead_time())
+      		    {
+      		      bool geiger_already_hit = true;
+      		      if (!GGH_2.get_auxiliaries().has_flag("geiger_already_hit")) GGH_2.grab_auxiliaries().store("geiger_already_hit", geiger_already_hit);
+      		    }
+      		}
+      	    } // end of jhit
+      	} // end of ihit
+
+      double number_of_tracker_hits = 0;
+      for (std::size_t ihit = 0; ihit < flaged_SD.get_number_of_step_hits(hit_label); ihit++)
+	{
+	  if (!flaged_SD.grab_step_hit("gg", ihit).get_auxiliaries().has_flag("geiger_already_hit")) number_of_tracker_hits++;
+	}
+
+      std::clog << "Total tracker hit = " << total_number_of_tracker_hits << std::endl;
+      std::clog << "Number of 'legit' tracker hit = " << number_of_tracker_hits << std::endl;
+
 
       // Traverse the collection of tracker hits and build the collection of
       for (std::size_t ihit = 0; ihit < number_of_tracker_hits; ihit++)
 	{
 	  // extract the hit:
-	  const mctools::base_step_hit & a_tracker_hit = sim_data_.get_step_hit(hit_label, ihit);
+	  const mctools::base_step_hit & a_tracker_hit = flaged_SD.get_step_hit(hit_label, ihit);
+
+	  if (a_tracker_hit.get_auxiliaries().has_flag("geiger_already_hit"))
+	    {
+	      // Skip hits with flag 'already hit'
+	      continue;
+	    }
 
 	  // extract the corresponding geom ID:
 	  const geomtools::geom_id & gid = a_tracker_hit.get_geom_id();
 
 	  // extract the geom info of the corresponding cell:
-	  const geomtools::geom_info& ginfo = the_mapping.get_geom_info(gid);
+	  const geomtools::geom_info & ginfo = the_mapping.get_geom_info(gid);
 
 	  // the position of the ion/electron pair creation within the cell volume:
 	  const geomtools::vector_3d & ionization_world_pos = a_tracker_hit.get_position_start();
@@ -317,198 +349,246 @@ namespace snemo {
 	  // true drift distance:
 	  const double drift_distance = (avalanche_impact_world_pos - ionization_world_pos).mag();
 
-	  // longitudinal position:
-	 const double lbottom_pos = avalanche_impact_cell_pos.z();
+	  // NOTE : anode and cathode efficiencies are set to 100%. There is no lost (WIP).
 
-	 // NOTE : anode and cathode efficiencies are set to 100%. There is no lost (WIP).
+	  // the time of the ion/electron pair creation:
+	  const double ionization_time = a_tracker_hit.get_time_start();
 
-	 // the time of the ion/electron pair creation:
-	 const double ionization_time = a_tracker_hit.get_time_start();
+	  /*** Anode TDC ***/
+	  // randomize the expected Geiger drift time:
+	  const double expected_drift_time = _geiger_.randomize_drift_time_from_drift_distance(_get_random(), drift_distance);
+	  const double computed_drift_time = _geiger_.compute_drift_time_from_drift_distance(drift_distance);
 
-	 /*** Anode TDC ***/
-	 // randomize the expected Geiger drift time:
-	 const double expected_drift_time = _geiger_.randomize_drift_time_from_drift_distance(_get_random(), drift_distance);
-	 const double anode_time = ionization_time + expected_drift_time;
-	 const double sigma_anode_time = _geiger_.get_sigma_anode_time(anode_time);
+	  const double anode_time = ionization_time + expected_drift_time;
+	  const double sigma_anode_time = _geiger_.get_sigma_anode_time(anode_time);
 
-	 /*** Cathodes TDCs ***/
-	 double bottom_cathode_time;
-	 double top_cathode_time;
-	 datatools::invalidate(bottom_cathode_time);
-	 datatools::invalidate(top_cathode_time);
-	 // Maybe use the 'real' sigma cathode time and use it for the mean value for the gaussian shoot.
-	 const double l_bottom = longitudinal_position + 0.5 * _geiger_.get_cell_length();
-	 const double mean_bottom_cathode_time = l_bottom / _geiger_.get_plasma_longitudinal_speed();
-	 const double sigma_bottom_cathode_time = 0.0;
-	 bottom_cathode_time = _get_random().gaussian(mean_bottom_cathode_time, sigma_bottom_cathode_time);
+	  /*** Cathodes TDCs ***/
+	  double bottom_cathode_time;
+	  double top_cathode_time;
+	  datatools::invalidate(bottom_cathode_time);
+	  datatools::invalidate(top_cathode_time);
+	  // Maybe use the 'real' sigma cathode time and use it for the mean value for the gaussian shoot.
+	  const double l_bottom = longitudinal_position + 0.5 * _geiger_.get_cell_length();
+	  const double mean_bottom_cathode_time = l_bottom / _geiger_.get_plasma_longitudinal_speed();
+	  bottom_cathode_time = mean_bottom_cathode_time;
 
-	 double l_top = 0.5 * _geiger_.get_cell_length() - longitudinal_position;
-	 if (l_top < 0) l_top = 1 * CLHEP::mm; // Negative value happens sometimes and screw times (because of longitudinal position)
-	 const double mean_top_cathode_time = l_top / _geiger_.get_plasma_longitudinal_speed();
-	 const double sigma_top_cathode_time = 0.0;
-	 top_cathode_time = _get_random().gaussian(mean_top_cathode_time, sigma_top_cathode_time);
+	  const double l_top = 0.5 * _geiger_.get_cell_length() - longitudinal_position;
+	  const double mean_top_cathode_time = l_top / _geiger_.get_plasma_longitudinal_speed();
+	  top_cathode_time = mean_top_cathode_time;
 
-	 const double sigma_cathode_time = _geiger_.get_sigma_cathode_time();
+	  // The anodic tracker signal has 2 components (2 subsignals) due to the plasma propagation along the anodic wire.
+	  // 2 plasmas are created, one collected by the top cathode and the second collected by the bottom cathode
+	  // To emulate this behaviour, the anodic signal is composed by 2 triangle gate signal shape.
 
-	 // The anodic tracker signal has 2 components (2 subsignals) due to the plasma propagation along the anodic wire.
-	 // 2 plasmas are created, one collected by the top cathode and the second collected by the bottom cathode
-	 // To emulate this behaviour, the anodic signal is composed by 2 triangle gate signal shape.
+	  // Signals beginning (common) :
+	  const double t0 = anode_time;
+	  const double t1 = t0 + _rise_time_;
 
-	 // Signals begining (common) :
-	 const double t0 = anode_time;
-	 const double t1 = t0 + _rise_time_;
+	  // Anodic signal 1 :
+	  const double sig1_duration = bottom_cathode_time; // No soustraction with t1 because it is a delay because the avalanche must take place before the plasma propagation
+	  const double sig1_t2 = t1 + sig1_duration;
+	  const double sig1_t3 = sig1_t2 + _fall_time_;
+	  const double sig1_amplitude = get_amplitude() / 2.;
 
-	 // Signal 1 :
-	 const double sig1_duration = bottom_cathode_time; // No soustraction with t1 because it is a delay because the avalanche must take place before the plasma propagation
-	 const double sig1_t2 = t1 + sig1_duration;
-	 const double sig1_t3 = sig1_t2 + _fall_time_;
-	 const double sig1_amplitude = get_amplitude() / 2.;
+	  // Build main parameters of the anodic triangle gate signals:
+	  mctools::signal::base_signal signal_1;
+	  int signal_id = this->get_running_signal_id();
+	  signal_1.set_hit_id(signal_id);
+	  this->_increment_running_signal_id();
+	  signal_1.set_geom_id(gid);
 
-	 // Build main parameters of the triangle gate signals:
-	 mctools::signal::base_signal signal_1;
-	 int signal_id = this->get_running_signal_id();
-	 signal_1.set_hit_id(signal_id);
-	 this->_increment_running_signal_id();
-	 signal_1.set_geom_id(gid);
+	  signal_1.set_category(get_signal_category());
+	  // What is the time reference for tracker signals ? 1st tracker hit or first PMT ? What happened if there is no PMT hit... (WIP)
+	  // For the moment keep 0 as the time reference
+	  const double event_time_ref = 0;
+	  signal_1.set_time_ref(event_time_ref);
+	  signal_1.set_shape_type_id("mctools::signal::triangle_gate_signal_shape");
+	  signal_1.set_shape_string_parameter("polarity", "-");
+	  signal_1.set_shape_real_parameter_with_explicit_unit("t0", t0, "ns");
+	  signal_1.set_shape_real_parameter_with_explicit_unit("t1", t1, "ns");
+	  signal_1.set_shape_real_parameter_with_explicit_unit("t2", sig1_t2, "ns");
+	  signal_1.set_shape_real_parameter_with_explicit_unit("t3", sig1_t3, "ns");
+	  signal_1.set_shape_real_parameter_with_explicit_unit("amplitude", sig1_amplitude, "V");
+	  signal_1.initialize_simple();
+	  // signal_1.tree_dump(std::clog, "Bot signal");
 
-	 signal_1.set_category(get_signal_category());
-	 // What is the time reference for tracker signals ? 1st tracker hit or first PMT ? What happened if there is no PMT hit... (WIP)
-	 // For the moment keep 0 as the time reference
-	 const double event_time_ref = 0;
-	 signal_1.set_time_ref(event_time_ref);
-	 signal_1.set_shape_type_id("mctools::signal::triangle_gate_signal_shape");
-	 signal_1.set_shape_string_parameter("polarity", "-");
-	 signal_1.set_shape_real_parameter_with_explicit_unit("t0", t0, "ns");
-	 signal_1.set_shape_real_parameter_with_explicit_unit("t1", t1, "ns");
-	 signal_1.set_shape_real_parameter_with_explicit_unit("t2", sig1_t2, "ns");
-	 signal_1.set_shape_real_parameter_with_explicit_unit("t3", sig1_t3, "ns");
-	 signal_1.set_shape_real_parameter_with_explicit_unit("amplitude", sig1_amplitude, "V");
-	 signal_1.initialize_simple();
-	 signal_1.tree_dump(std::clog, "Bot signal");
+	  // Anodic signal 2 :
+	  const double sig2_duration = top_cathode_time; // No soustraction with t1 because it is a delay because the avalanche must take place before the plasma propagation
+	  const double sig2_t2 = t1 + sig2_duration;
+	  const double sig2_t3 = sig2_t2 + _fall_time_;
+	  const double sig2_amplitude = get_amplitude() / 2.;
 
-	 // Signal 2 :
-	 const double sig2_duration = top_cathode_time; // No soustraction with t1 because it is a delay because the avalanche must take place before the plasma propagation
-	 const double sig2_t2 = t1 + sig2_duration;
-	 const double sig2_t3 = sig2_t2 + _fall_time_;
-	 const double sig2_amplitude = get_amplitude() / 2.;
+	  mctools::signal::base_signal signal_2;
+	  signal_id = this->get_running_signal_id();
+	  signal_2.set_hit_id(signal_id);
+	  this->_increment_running_signal_id();
+	  signal_2.set_geom_id(gid);
 
-	 mctools::signal::base_signal signal_2;
-	 signal_id = this->get_running_signal_id();
-	 signal_2.set_hit_id(signal_id);
-	 this->_increment_running_signal_id();
-	 signal_2.set_geom_id(gid);
+	  signal_2.set_category(get_signal_category());
+	  // What is the time reference for tracker signals ? 1st tracker hit or first PMT ? What happened if there is no PMT hit... (WIP)
+	  // For the moment keep 0 as the time reference
+	  signal_2.set_time_ref(event_time_ref);
+	  signal_2.set_shape_type_id("mctools::signal::triangle_gate_signal_shape");
+	  signal_2.set_shape_string_parameter("polarity", "-");
+	  signal_2.set_shape_real_parameter_with_explicit_unit("t0", t0, "ns");
+	  signal_2.set_shape_real_parameter_with_explicit_unit("t1", t1, "ns");
+	  signal_2.set_shape_real_parameter_with_explicit_unit("t2", sig2_t2, "ns");
+	  signal_2.set_shape_real_parameter_with_explicit_unit("t3", sig2_t3, "ns");
+	  signal_2.set_shape_real_parameter_with_explicit_unit("amplitude", sig2_amplitude, "V");
+	  signal_2.initialize_simple();
+	  // signal_2.tree_dump(std::clog, "Top signal");
 
-	 signal_2.set_category(get_signal_category());
-	 // What is the time reference for tracker signals ? 1st tracker hit or first PMT ? What happened if there is no PMT hit... (WIP)
-	 // For the moment keep 0 as the time reference
-	 signal_2.set_time_ref(event_time_ref);
-	 signal_2.set_shape_type_id("mctools::signal::triangle_gate_signal_shape");
-	 signal_2.set_shape_string_parameter("polarity", "-");
-	 signal_2.set_shape_real_parameter_with_explicit_unit("t0", t0, "ns");
-	 signal_2.set_shape_real_parameter_with_explicit_unit("t1", t1, "ns");
-	 signal_2.set_shape_real_parameter_with_explicit_unit("t2", sig2_t2, "ns");
-	 signal_2.set_shape_real_parameter_with_explicit_unit("t3", sig2_t3, "ns");
-	 signal_2.set_shape_real_parameter_with_explicit_unit("amplitude", sig2_amplitude, "V");
-	 signal_2.initialize_simple();
-	 signal_2.tree_dump(std::clog, "Top signal");
+	  bool build_signal = true;
+	  // Should we consider case where we do not generate the
+	  // signal associated to the hit ?
+	  if (!build_signal) {
+	    continue;
+	  }
 
-	 bool build_signal = true;
-	 // Should we consider case where we do not generate the
-	 // signal associated to the hit ?
-	 if (!build_signal) {
-	   continue;
-	 }
+	  // Build a new signal composed by 2 sub signals (1 top 1 bottom)
+	  mctools::signal::base_signal & a_signal = sim_signal_data_.add_signal(get_signal_category());
+	  signal_id = this->get_running_signal_id();
+	  a_signal.set_hit_id(signal_id);
+	  this->_increment_running_signal_id();
+	  a_signal.set_geom_id(gid);
+	  a_signal.set_category(get_signal_category());
+	  a_signal.set_time_ref(event_time_ref);
+	  a_signal.set_shape_type_id("mctools::signal::multi_signal_shape");
 
-	 // Build a new signal composed by 2 sub signals (1 top 1 bottom)
-	 mctools::signal::base_signal & a_signal = sim_signal_data_.add_signal(get_signal_category());
-	 signal_id = this->get_running_signal_id();
-	 a_signal.set_hit_id(signal_id);
-	 this->_increment_running_signal_id();
-	 a_signal.set_geom_id(gid);
-	 a_signal.set_category(get_signal_category());
-	 a_signal.set_time_ref(event_time_ref);
-	 a_signal.set_shape_type_id("mctools::signal::multi_signal_shape");
+	  a_signal.grab_auxiliaries().store_string("subcategory", "anodic");
 
-	 datatools::properties multi_signal_config;
-	 std::vector<std::string> component_labels;
-	 const int comp_sig1_id = signal_1.get_hit_id();
-	 const int comp_sig2_id = signal_2.get_hit_id();
+	  datatools::properties multi_signal_config;
+	  std::vector<std::string> component_labels;
+	  const int comp_sig1_id = signal_1.get_hit_id();
+	  const int comp_sig2_id = signal_2.get_hit_id();
 
-	 std::string comp_sig1_key = "sig" + boost::lexical_cast<std::string>(comp_sig1_id);
-	 std::string comp_sig2_key = "sig" + boost::lexical_cast<std::string>(comp_sig2_id);
-	 component_labels.push_back(comp_sig1_key);
-	 component_labels.push_back(comp_sig2_key);
+	  std::string comp_sig1_key = "sig" + boost::lexical_cast<std::string>(comp_sig1_id);
+	  std::string comp_sig2_key = "sig" + boost::lexical_cast<std::string>(comp_sig2_id);
+	  component_labels.push_back(comp_sig1_key);
+	  component_labels.push_back(comp_sig2_key);
 
-	 std::string comp_sig1_prefix = "components." + comp_sig1_key + ".";
-	 std::string comp_sig2_prefix = "components." + comp_sig2_key + ".";
+	  std::string comp_sig1_prefix = "components." + comp_sig1_key + ".";
+	  std::string comp_sig2_prefix = "components." + comp_sig2_key + ".";
 
-	 datatools::properties comp_shape1_parameters;
-	 signal_1.get_auxiliaries().export_and_rename_starting_with(comp_shape1_parameters,
-								    mctools::signal::base_signal::shape_parameter_prefix(),
-								    "");
-	 datatools::properties comp_shape2_parameters;
-	 signal_2.get_auxiliaries().export_and_rename_starting_with(comp_shape2_parameters,
-								    mctools::signal::base_signal::shape_parameter_prefix(),
-								    "");
+	  datatools::properties comp_shape1_parameters;
+	  signal_1.get_auxiliaries().export_and_rename_starting_with(comp_shape1_parameters,
+								     mctools::signal::base_signal::shape_parameter_prefix(),
+								     "");
+	  datatools::properties comp_shape2_parameters;
+	  signal_2.get_auxiliaries().export_and_rename_starting_with(comp_shape2_parameters,
+								     mctools::signal::base_signal::shape_parameter_prefix(),
+								     "");
 
-	 std::string comp_sig1_label;
-	 build_private_signal_name(comp_sig1_id, comp_sig1_label);
-	 std::string comp_sig2_label;
-	 build_private_signal_name(comp_sig2_id, comp_sig2_label);
+	  std::string comp_sig1_label;
+	  build_private_signal_name(comp_sig1_id, comp_sig1_label);
+	  std::string comp_sig2_label;
+	  build_private_signal_name(comp_sig2_id, comp_sig2_label);
 
-	 // Make the signal 1 a private shape:
-	 a_signal.add_private_shape(comp_sig1_label,
-				    signal_1.get_shape_type_id(),
-				    comp_shape1_parameters);
+	  // Make the signal 1 a private shape:
+	  a_signal.add_private_shape(comp_sig1_label,
+				     signal_1.get_shape_type_id(),
+				     comp_shape1_parameters);
 
-	 // Private shape
-	 std::string key_key1        = comp_sig1_prefix + "key";
-	 std::string time_shift_key1 = comp_sig1_prefix + "time_shift";
-	 std::string scaling_key1    = comp_sig1_prefix + "scaling";
-	 multi_signal_config.store(key_key1, comp_sig1_label);
-	 multi_signal_config.store_real_with_explicit_unit(time_shift_key1, 0.0 * CLHEP::ns);
-	 multi_signal_config.set_unit_symbol(time_shift_key1, "ns");
-	 multi_signal_config.store_real(scaling_key1, 1.0);
+	  // Private shape
+	  std::string key_key1        = comp_sig1_prefix + "key";
+	  std::string time_shift_key1 = comp_sig1_prefix + "time_shift";
+	  std::string scaling_key1    = comp_sig1_prefix + "scaling";
+	  multi_signal_config.store(key_key1, comp_sig1_label);
+	  multi_signal_config.store_real_with_explicit_unit(time_shift_key1, 0.0 * CLHEP::ns);
+	  multi_signal_config.set_unit_symbol(time_shift_key1, "ns");
+	  multi_signal_config.store_real(scaling_key1, 1.0);
 
 
-	 // Make the signal 2 a private shape:
-	 a_signal.add_private_shape(comp_sig2_label,
-				    signal_2.get_shape_type_id(),
-				    comp_shape2_parameters);
+	  // Make the signal 2 a private shape:
+	  a_signal.add_private_shape(comp_sig2_label,
+				     signal_2.get_shape_type_id(),
+				     comp_shape2_parameters);
 
-	 // Private shape
-	 std::string key_key2        = comp_sig2_prefix + "key";
-	 std::string time_shift_key2 = comp_sig2_prefix + "time_shift";
-	 std::string scaling_key2    = comp_sig2_prefix + "scaling";
-	 multi_signal_config.store(key_key2, comp_sig2_label);
-	 multi_signal_config.store_real_with_explicit_unit(time_shift_key2, 0.0 * CLHEP::ns);
-	 multi_signal_config.set_unit_symbol(time_shift_key2, "ns");
-	 multi_signal_config.store_real(scaling_key2, 1.0);
+	  // Private shape
+	  std::string key_key2        = comp_sig2_prefix + "key";
+	  std::string time_shift_key2 = comp_sig2_prefix + "time_shift";
+	  std::string scaling_key2    = comp_sig2_prefix + "scaling";
+	  multi_signal_config.store(key_key2, comp_sig2_label);
+	  multi_signal_config.store_real_with_explicit_unit(time_shift_key2, 0.0 * CLHEP::ns);
+	  multi_signal_config.set_unit_symbol(time_shift_key2, "ns");
+	  multi_signal_config.store_real(scaling_key2, 1.0);
 
-	 multi_signal_config.store("components", component_labels);
-	 a_signal.set_shape_parameters(multi_signal_config);
-	 // a_signal.tree_dump(std::clog, "An anodic signal composed by 2 sub signals");
+	  multi_signal_config.store("components", component_labels);
+	  a_signal.set_shape_parameters(multi_signal_config);
+	  a_signal.initialize(multi_signal_config);
+	  signal_1.tree_dump(std::clog, "A signal 1");
+	  signal_2.tree_dump(std::clog, "A signal 2");
+	  a_signal.tree_dump(std::clog, "An anodic signal composed by 2 sub signals");
 
-	 DT_LOG_DEBUG(get_logging_priority(), "Cell #                     : " << ihit);
-	 DT_LOG_DEBUG(get_logging_priority(), "Geom ID                    : " << gid);
-	 // DT_LOG_DEBUG(get_logging_priority(), "ionization_world_pos       : " << ionization_world_pos);
-	 // DT_LOG_DEBUG(get_logging_priority(), "avalanche_impact_world_pos : " << avalanche_impact_world_pos);
-	 // DT_LOG_DEBUG(get_logging_priority(), "avalanche_impact_cell_pos  : " << avalanche_impact_cell_pos);
-	 DT_LOG_DEBUG(get_logging_priority(), "geiger_cell_length         : " << _geiger_.get_cell_length() / CLHEP::mm << " mm");
-	 DT_LOG_DEBUG(get_logging_priority(), "longitudinal_position_pos  : " << longitudinal_position / CLHEP::mm << " mm");
-	 DT_LOG_DEBUG(get_logging_priority(), "l_bottom                   : " << l_bottom / CLHEP::mm << " mm");
-	 DT_LOG_DEBUG(get_logging_priority(), "l_top                      : " << l_top / CLHEP::mm << " mm");
-	 DT_LOG_DEBUG(get_logging_priority(), "longitudinal_position_pos  : " << longitudinal_position / CLHEP::mm << " mm");
-	 DT_LOG_DEBUG(get_logging_priority(), "ionization_time            : " << ionization_time / CLHEP::microsecond << " us");
-	 DT_LOG_DEBUG(get_logging_priority(), "drift_distance             : " << drift_distance / CLHEP::mm << " mm");
-	 DT_LOG_DEBUG(get_logging_priority(), "expected_drift_time        : " << expected_drift_time / CLHEP::microsecond << " us");
-	 DT_LOG_DEBUG(get_logging_priority(), "anode_time                 : " << anode_time / CLHEP::microsecond << " us");
-	 DT_LOG_DEBUG(get_logging_priority(), "bottom_cathode_time        : " << bottom_cathode_time / CLHEP::microsecond << " us");
-	 DT_LOG_DEBUG(get_logging_priority(), "top_cathode_time           : " << top_cathode_time / CLHEP::microsecond << " us");
-	 std::clog << std::endl;
 
-	 // NOTE : Tracker signals cannot pile-up for the moment. First hit in a GID will create associated signals and that's it. (WIP)
+	  // Construct cathodic signals thanks to parameters already computed:
 
+	  // Top cathode signal:
+	  mctools::signal::base_signal & top_cathode_signal = sim_signal_data_.add_signal(get_signal_category());
+	  signal_id = this->get_running_signal_id();
+	  top_cathode_signal.set_hit_id(signal_id);
+	  this->_increment_running_signal_id();
+	  top_cathode_signal.set_geom_id(gid);
+	  top_cathode_signal.set_category(get_signal_category());
+	  top_cathode_signal.set_time_ref(event_time_ref);
+	  top_cathode_signal.grab_auxiliaries().store_string("subcategory", "cathodic");
+	  top_cathode_signal.set_shape_type_id("mctools::signal::triangle_signal_shape");
+	  const double top_cathode_t0 = sig2_t2;
+	  const double top_cathode_t1 = top_cathode_t0 + _rise_time_ / 2.;
+	  const double top_cathode_t2 = top_cathode_t1 + _fall_time_; // sig2_t3;
+	  const double top_cathode_amplitude = sig2_amplitude;
+	  top_cathode_signal.set_shape_string_parameter("polarity", "+");
+	  top_cathode_signal.set_shape_real_parameter_with_explicit_unit("t0", top_cathode_t0, "ns");
+	  top_cathode_signal.set_shape_real_parameter_with_explicit_unit("t1", top_cathode_t1, "ns");
+	  top_cathode_signal.set_shape_real_parameter_with_explicit_unit("t2", top_cathode_t2, "ns");
+	  top_cathode_signal.set_shape_real_parameter_with_explicit_unit("amplitude", top_cathode_amplitude, "V");
+	  top_cathode_signal.initialize_simple();
+	  top_cathode_signal.tree_dump(std::clog, "A Top cathodic signal");
+
+	  // Bottom cathode signal:
+	  mctools::signal::base_signal & bottom_cathode_signal = sim_signal_data_.add_signal(get_signal_category());
+	  signal_id = this->get_running_signal_id();
+	  bottom_cathode_signal.set_hit_id(signal_id);
+	  this->_increment_running_signal_id();
+	  bottom_cathode_signal.set_geom_id(gid);
+	  bottom_cathode_signal.set_category(get_signal_category());
+	  bottom_cathode_signal.set_time_ref(event_time_ref);
+	  bottom_cathode_signal.grab_auxiliaries().store_string("subcategory", "cathodic");
+	  bottom_cathode_signal.set_shape_type_id("mctools::signal::triangle_signal_shape");
+	  const double bottom_cathode_t0 = sig1_t2;
+	  const double bottom_cathode_t1 = bottom_cathode_t0 + _rise_time_ / 2.;
+	  const double bottom_cathode_t2 = bottom_cathode_t1 + _fall_time_;
+	  const double bottom_cathode_amplitude = sig1_amplitude;
+	  bottom_cathode_signal.set_shape_string_parameter("polarity", "+");
+	  bottom_cathode_signal.set_shape_real_parameter_with_explicit_unit("t0", bottom_cathode_t0, "ns");
+	  bottom_cathode_signal.set_shape_real_parameter_with_explicit_unit("t1", bottom_cathode_t1, "ns");
+	  bottom_cathode_signal.set_shape_real_parameter_with_explicit_unit("t2", bottom_cathode_t2, "ns");
+	  bottom_cathode_signal.set_shape_real_parameter_with_explicit_unit("amplitude", bottom_cathode_amplitude, "V");
+	  bottom_cathode_signal.initialize_simple();
+	  bottom_cathode_signal.tree_dump(std::clog, "A Bottom cathodic signal");
+
+
+
+	  // DT_LOG_DEBUG(get_logging_priority(), "Cell #                     : " << ihit);
+	  // DT_LOG_DEBUG(get_logging_priority(), "Geom ID                    : " << gid);
+	  // // DT_LOG_DEBUG(get_logging_priority(), "ionization_world_pos       : " << ionization_world_pos);
+	  // // DT_LOG_DEBUG(get_logging_priority(), "avalanche_impact_world_pos : " << avalanche_impact_world_pos);
+	  // // DT_LOG_DEBUG(get_logging_priority(), "avalanche_impact_cell_pos  : " << avalanche_impact_cell_pos);
+	  // DT_LOG_DEBUG(get_logging_priority(), "geiger_cell_length         : " << _geiger_.get_cell_length() / CLHEP::mm << " mm");
+	  // DT_LOG_DEBUG(get_logging_priority(), "longitudinal_position_pos  : " << longitudinal_position / CLHEP::mm << " mm");
+	  // DT_LOG_DEBUG(get_logging_priority(), "l_bottom                   : " << l_bottom / CLHEP::mm << " mm");
+	  // DT_LOG_DEBUG(get_logging_priority(), "l_top                      : " << l_top / CLHEP::mm << " mm");
+	  // DT_LOG_DEBUG(get_logging_priority(), "longitudinal_position_pos  : " << longitudinal_position / CLHEP::mm << " mm");
+	  // DT_LOG_DEBUG(get_logging_priority(), "ionization_time            : " << ionization_time / CLHEP::microsecond << " us");
+	  // DT_LOG_DEBUG(get_logging_priority(), "drift_distance             : " << drift_distance / CLHEP::mm << " mm");
+	  // DT_LOG_DEBUG(get_logging_priority(), "expected_drift_time        : " << expected_drift_time / CLHEP::microsecond << " us");
+	  // DT_LOG_DEBUG(get_logging_priority(), "computed_drift_time        : " << computed_drift_time / CLHEP::microsecond << " us");
+	  // DT_LOG_DEBUG(get_logging_priority(), "anode_time                 : " << anode_time / CLHEP::microsecond << " us");
+	  // DT_LOG_DEBUG(get_logging_priority(), "bottom_cathode_time        : " << bottom_cathode_time / CLHEP::microsecond << " us");
+	  // DT_LOG_DEBUG(get_logging_priority(), "top_cathode_time           : " << top_cathode_time / CLHEP::microsecond << " us");
+	  // std::clog << std::endl;
+
+	  // NOTE : Tracker signals cannot pile-up for the moment. First hit in a GID will create associated signals and that's it. (WIP)
 
 	} // end of ihit
 

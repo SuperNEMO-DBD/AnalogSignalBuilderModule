@@ -18,9 +18,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Falaise/ASB plugin.  If not, see <http://www.gnu.org/licenses/>.
 
-// Ourselves:
-#include <snemo/asb/geiger_analogic_regime.h>
-
 // Standard library:
 #include <cmath>
 #include <sstream>
@@ -33,7 +30,8 @@
 // - Bayeux/mygsl:
 #include <mygsl/rng.h>
 
-
+// Ourselves:
+#include <snemo/asb/geiger_analogic_regime.h>
 
 namespace snemo {
 
@@ -188,36 +186,19 @@ namespace snemo {
 		  "Cut drift time is too short (" << _tcut_ / time_unit << " us < 8 us) !");
 
       const double r_cell = 0.5 * _cell_diameter_;
-      // 2011-05-12 FM : Compute a valid t0 before :
-      double step_drift_time1 = 0.050 * time_unit;
-      bool tune = false;
-      for (double drift_time = 0.0 * time_unit; drift_time < (_tcut_ + 0.5 * step_drift_time1); drift_time += step_drift_time1)
-	{
-	  const double drift_radius = base_t_2_r(drift_time, 1);
-	  if (drift_radius > r_cell)
-	    {
-	      if (tune)
-		{
-		  _t0_ = drift_time - 0.5 * step_drift_time1;
-		  break;
-		}
-	      else
-		{
-		  drift_time -= 2 * step_drift_time1;
-		  step_drift_time1 /= 20;
-		  tune = true;
-		}
-	    }
-	}
+      _r0_ = r_cell;
+      _rdiag_ = r_cell * sqrt(2.0);
 
-      const double step_drift_time = 0.2 * time_unit;
+      // Associated t0 to r0 = to 4 us :
+      _t0_ = 4 * time_unit;
+
+      // Construct the T<->R tabulated function :
+      const double step_drift_time = 0.1 * time_unit;
       for (double drift_time = 0.0 * time_unit; drift_time < (_tcut_ + 0.5 * step_drift_time); drift_time += step_drift_time) {
 	const double drift_radius = base_t_2_r(drift_time);
 	_base_rt_.add_point(drift_radius, drift_time, false);
       }
       _base_rt_.lock_table("linear");
-      _r0_ = r_cell;
-      _rdiag_ = r_cell * sqrt(2.0);
 
       _initialized_ = true;
       return;
@@ -249,7 +230,7 @@ namespace snemo {
       _sigma_plasma_longitudinal_speed_ = 0.5 * CLHEP::cm / CLHEP::microsecond;
 
       // Reset internals:
-      _tcut_ = 10. * CLHEP::microsecond;
+      _tcut_ = 13. * CLHEP::microsecond;
       datatools::invalidate(_t0_);
       datatools::invalidate(_r0_);
       datatools::invalidate(_rdiag_);
@@ -331,19 +312,32 @@ namespace snemo {
     }
 
     /** Value computed from I.Nasteva's plot in DocDB #843:
-     *  see: <sncore source dir>/doc/geiger_analogic_regime/sn90cells_anode_efficiency.jpg
+     *  Fit obtain from:
+     *   shell> cd <sncore source dir>/documentation/physics/geiger/anode_efficiency.gp
+     *   shell> gnuplot anode_efficiency.gp
      */
-    double geiger_analogic_regime::get_anode_efficiency(double r_) const
+    double geiger_analogic_regime::get_anode_efficiency(double r_, int mode_) const
     {
       DT_THROW_IF(!is_initialized(), std::logic_error, "Not initialized !");
       const double max_eff = _base_anode_efficiency_;
-      if (r_ < _r0_) return max_eff;
-      if (r_ < _rdiag_)
+      if (mode_ == 0)
 	{
-	  const double sr0 = get_sigma_r(_r0_);
-	  return max_eff * exp(-(r_ - _r0_) / sr0);
+	  // Window mode
+	  if (r_ <= _r0_) return max_eff;
+	  else return 0.0;
 	}
-      return 0.0;
+
+      if (mode_ == 1)
+	{
+	  // Sigmoid function representing the unefficiency outside rcell
+	  // Parameters can be changed if it's needed
+	  const double A1 = _r0_ + 1 * CLHEP::mm; // Sigmoid centre
+	  const double B1 = 3 * CLHEP::mm;        // Sigmoid width
+
+	  if (r_ <= _r0_ - B1) return max_eff;
+	  else if (r_ > _r0_ - B1 && r_ < _rdiag_) return  (max_eff - (max_eff / (1 +  exp(-B1 * (r_ - A1)))));
+	  else  return 0.0;
+	}
     }
 
     double geiger_analogic_regime::get_cathode_efficiency() const
@@ -366,8 +360,10 @@ namespace snemo {
       return _base_rt_;
     }
 
-    /** Value computed from I.Nasteva's plot in DocDB #843:
-     *  see: <sncore source dir>/doc/geiger_analogic_regime/sn90cells_longitudinal_resolution.jpg
+    /** Value computed from I.Nasteva's plot in DocDB #843
+     *  Fit obtain from:
+     *   shell> cd <sncore source dir>/documentation/physics/geiger/cathode_efficiency.gp
+     *   shell> gnuplot cathode_efficiency.gp
      */
     double geiger_analogic_regime::get_sigma_z(double /* z_ */, size_t missing_cathode_) const
     {
@@ -378,7 +374,9 @@ namespace snemo {
     }
 
     /** Value computed from I.Nasteva's plot in DocDB #843:
-     *  see: <sncore source dir>/doc/geiger_analogic_regime/sn90cells_sigma_r.jpg
+     *  Fit obtained from:
+     *   shell> cd <sncore source dir>/documentation/physics/geiger/drift_time_calibration.gp
+     *   shell> gnuplot drift_time_calibration.gp
      */
     double geiger_analogic_regime::get_sigma_r(double r_) const
     {
@@ -390,35 +388,43 @@ namespace snemo {
       return sr * CLHEP::mm;
     }
 
-    double geiger_analogic_regime::base_t_2_r(double time_, int mode_) const
+    double geiger_analogic_regime::base_t_2_r(double time_) const
     {
       DT_THROW_IF(time_ < 0.0, std::range_error, "Invalid drift time !");
       /* Fit obtained from:
-       *   shell> cd <sncore source dir>/doc/geiger_analogic_regime
-       *   shell> gnuplot calib_t-r_0.gpl
-       *
+       *   shell> cd <sncore source dir>/documentation/physics/geiger/drift_time_calibration.gp
+       *   shell> gnuplot drift_time_calibration.gp
        */
-      const double A1 = 0.570947153108633;
-      const double B1 = 0.580148313540993;
-      const double C1 = 1.6567483468611;
-      const double A2 = 1.86938462695651;
-      const double B2 = 0.949912427483918;
+
+      // Parameters and function for t [0:4] us :
+      const double A1 = 0.561467153108633;
+      const double B1 = 0.580448313540993;
+      const double C1 = 1.69887483468611;
+
       const double t_usec = time_ / CLHEP::microsecond;
       const double ut = 10. * t_usec;
-      double r = A1 * ut / (std::pow(ut, B1) + C1);
-      if (mode_ == 0)
+      double r = 0;
+
+      if (time_ > 0 && time_ <= _t0_)
 	{
-	  if (time_ > _t0_)
-	    {
-	      r = A2 * ut / (std::pow(ut, B2));
-	    }
+	  r = A1 * ut / (std::pow(ut, B1) + C1);
 	}
+      else if (time_ > _t0_ && time_ <= _tcut_)
+	{
+	  // If time is over 4 us (== to over rcell), use an other function :
+	  // Linear approximation [t >= _t0_ : t < _tcut_]
+	  const double A2 = (_rdiag_ - _r0_) / (_tcut_ - _t0_) * 100;
+	  const double B2 = _r0_ / CLHEP::cm;
+	  r = A2 * ((time_ - _t0_) / CLHEP::microsecond) + B2;
+	}
+      else r = 0;
+
       r *= CLHEP::cm;
+
       return r;
     }
 
-    double geiger_analogic_regime::randomize_drift_time_from_drift_distance(mygsl::rng & ran_,
-									    double drift_distance_) const
+    double geiger_analogic_regime::compute_drift_time_from_drift_distance(double drift_distance_) const
     {
       DT_THROW_IF(!is_initialized(), std::logic_error, "Not initialized !");
       DT_THROW_IF(drift_distance_ < 0.0, std::range_error, "Invalid drift distance !");
@@ -427,92 +433,102 @@ namespace snemo {
       double drift_time;
       datatools::invalidate(drift_time);
 
-      if (drift_distance_ <= _rdiag_)
+      const double rcut = _base_rt_.x_max();
+      if (drift_distance_ <= rcut)
 	{
-	  const double rcut = _base_rt_.x_max();
-	  const double tcut = _base_rt_(rcut);
-
-	  DT_LOG_TRACE(local_priority, "drift_distance_ = " << drift_distance_ << " "
-		       << "rdiag = " << _rdiag_ << " "
-		       << "rcut = " << rcut);
-
-	  // if (drift_distance_ <= __r0 + sr0)
-	  if (drift_distance_ <= rcut)
-	    {
-	      double sr = get_sigma_r(drift_distance_);
-	      if (drift_distance_ > _r0_) sr = get_sigma_r(_r0_);
-	      double r_min = drift_distance_ - sr;
-	      if (r_min < 0.0) r_min = 0.0;
-	      const double t_min = _base_rt_(r_min);
-	      const double t_mean = _base_rt_(drift_distance_);
-	      const double mean_time = t_mean;
-	      const double sigma_time = (t_mean - t_min);
-	      drift_time = ran_.gaussian(mean_time, sigma_time);
-	      // protect against pathological times :
-	      if (drift_distance_ > _r0_)
-		{
-		  const double sr0 = get_sigma_r(_r0_);
-		  const double st0 = _t0_ - _base_rt_(_r0_ - sr0);
-		  const double tinf = _t0_ - 2 * st0;
-		  if (drift_time < tinf)
-		    {
-		      drift_time = 2 * tinf - drift_time;
-		    }
-		}
-	    }
-	  else
-	    {
-	      const double t2 = tcut;
-	      const double r2 = rcut;
-	      const double r1 = (r2 + _r0_) / 2;
-	      const double t1 = _t0_;
-	      DT_LOG_TRACE(local_priority, "t0 = " << _t0_);
-	      DT_LOG_TRACE(local_priority, "tcut = " << _tcut_);
-	      DT_LOG_TRACE(local_priority, "t1 = " << t1 << " t2 = " << t2);
-	      DT_LOG_TRACE(local_priority, "r1 = " << r1 << " r2 = " << r2);
-	      if (drift_distance_ < r2)
-		{
-		  const double sr = get_sigma_r(drift_distance_);
-		  const double r_min = drift_distance_ - sr;
-		  const double r_max = drift_distance_ + sr;
-		  const double t_min = t1 + (r_min - r1) * (t2 - t1) / (r2 - r1);
-		  const double t_max = t1 + (r_max - r1) * (t2 - t1) / (r2 - r1);
-		  const double mean_time = 0.5 * (t_max + t_min);
-		  const double sigma_time = 0.5 * (t_max - t_min);
-		  drift_time = ran_.gaussian(mean_time, sigma_time);
-		  drift_time = mean_time;  // XXX
-		  DT_LOG_TRACE(local_priority,
-			       "drift_distance_ = " << drift_distance_ << " mean_time = " << mean_time);
-		  const double tlim = _t0_;
-		  if (drift_time < tlim)
-		    {
-		      drift_time = 2 * tlim - drift_time;
-		    }
-
-		  double ta = mean_time - 2 * sigma_time;
-		  if (ta < t1)
-		    {
-		      ta = t1;
-		    }
-		  const double tb = mean_time + 2 * sigma_time;
-		  drift_time = ran_.flat(ta, tb);
-		}
-	    }
-
-	  // protection against negative random drift times:
-	  if (drift_time < 0.0)
-	    {
-	      drift_time = 0.5 * _sigma_anode_time_;
-	    }
+	  drift_time = _base_rt_(drift_distance_);
 	}
+      else datatools::invalidate(drift_time);
+
+      DT_LOG_TRACE(local_priority, "drift_time = " << drift_time);
+
+      return drift_time;
+    }
+
+    double geiger_analogic_regime::randomize_drift_time_from_drift_distance(mygsl::rng& ran_,
+									    double drift_distance_) const {
+      DT_THROW_IF(!is_initialized(), std::logic_error, "Not initialized !");
+      DT_THROW_IF(drift_distance_ < 0.0, std::range_error, "Invalid drift distance !");
+      datatools::logger::priority local_priority = datatools::logger::PRIO_WARNING;
+
+      double drift_time;
+      datatools::invalidate(drift_time);
+
+      if (drift_distance_ <= _rdiag_) {
+	const double rcut = _base_rt_.x_max();
+	const double tcut = _base_rt_(rcut);
+
+	DT_LOG_TRACE(local_priority, "drift_distance_ = " << drift_distance_ << " "
+		     << "rdiag = " << _rdiag_ << " "
+		     << "rcut = " << rcut);
+
+	// if (drift_distance_ <= __r0 + sr0)
+	if (drift_distance_ <= rcut) {
+	  double sr = get_sigma_r(drift_distance_);
+	  if (drift_distance_ > _r0_) sr = get_sigma_r(_r0_);
+	  double r_min = drift_distance_ - sr;
+	  if (r_min < 0.0) r_min = 0.0;
+	  const double t_min = _base_rt_(r_min);
+	  const double t_mean = _base_rt_(drift_distance_);
+	  const double mean_time = t_mean;
+	  const double sigma_time = (t_mean - t_min);
+	  drift_time = ran_.gaussian(mean_time, sigma_time);
+	  // protect against pathological times :
+	  if (drift_distance_ > _r0_) {
+	    const double sr0 = get_sigma_r(_r0_);
+	    const double st0 = _t0_ - _base_rt_(_r0_ - sr0);
+	    const double tinf = _t0_ - 2 * st0;
+	    if (drift_time < tinf) {
+	      drift_time = 2 * tinf - drift_time;
+	    }
+	  }
+	} else {
+	  const double t2 = tcut;
+	  const double r2 = rcut;
+	  const double r1 = (r2 + _r0_) / 2;
+	  const double t1 = _t0_;
+	  DT_LOG_TRACE(local_priority, "t0 = " << _t0_);
+	  DT_LOG_TRACE(local_priority, "tcut = " << _tcut_);
+	  DT_LOG_TRACE(local_priority, "t1 = " << t1 << " t2 = " << t2);
+	  DT_LOG_TRACE(local_priority, "r1 = " << r1 << " r2 = " << r2);
+	  if (drift_distance_ < r2) {
+	    const double sr = get_sigma_r(drift_distance_);
+	    const double r_min = drift_distance_ - sr;
+	    const double r_max = drift_distance_ + sr;
+	    const double t_min = t1 + (r_min - r1) * (t2 - t1) / (r2 - r1);
+	    const double t_max = t1 + (r_max - r1) * (t2 - t1) / (r2 - r1);
+	    const double mean_time = 0.5 * (t_max + t_min);
+	    const double sigma_time = 0.5 * (t_max - t_min);
+	    drift_time = ran_.gaussian(mean_time, sigma_time);
+	    drift_time = mean_time;  // XXX
+	    DT_LOG_TRACE(local_priority,
+			 "drift_distance_ = " << drift_distance_ << " mean_time = " << mean_time);
+	    const double tlim = _t0_;
+	    if (drift_time < tlim) {
+	      drift_time = 2 * tlim - drift_time;
+	    }
+
+	    double ta = mean_time - 2 * sigma_time;
+	    if (ta < t1) {
+	      ta = t1;
+	    }
+	    const double tb = mean_time + 2 * sigma_time;
+	    drift_time = ran_.flat(ta, tb);
+	  }
+	}
+
+	// protection against negative random drift times:
+	if (drift_time < 0.0) {
+	  drift_time = 0.5 * _sigma_anode_time_;
+	}
+      }
 
       // 2012/01/06: XG: quickly fix non valid drift time (maybe
       // there is a better by solving some strange 'if' condition
       // before)
-      if (!datatools::is_valid(drift_time))
-	{
-	  drift_time = _tcut_;
-	}
+      if (!datatools::is_valid(drift_time)) {
+	drift_time = _tcut_;
+      }
 
       DT_LOG_TRACE(local_priority, "drift_time = " << drift_time);
       return drift_time;

@@ -65,7 +65,7 @@ namespace snemo {
       virtual ~tracker_signal_generator_driver();
 
 			/// Set the external PRNG
-			void set_external_random(mygsl::rng& rng_);
+			void set_external_random(mygsl::rng & rng_);
 
 			/// Reset the external PRNG
 			void reset_external_random();
