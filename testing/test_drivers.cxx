@@ -96,7 +96,9 @@ int main( int  argc_ , char **argv_  )
       params.draw = true;
     }
 
-    // test_drivers_1(params);
+    std::clog << "First test..." << std::endl;
+    test_drivers_1(params);
+
     std::clog << "Next test..." << std::endl;
     test_drivers_2(params);
 
@@ -200,14 +202,10 @@ void test_drivers_1(const params_type & params_)
             my_signal.get_auxiliaries().export_and_rename_starting_with(my_signal_shape_properties,
                                                                         mctools::signal::base_signal::shape_parameter_prefix(),
                                                                         "");
-            // std::clog << "[info] Signal #" << isignal << ": " << std::endl;
-            // my_signal.tree_dump(std::clog, "", "[info] ");
-            // std::clog << "[info] |-- Shape type ID: '" << my_signal.get_shape_type_id() << "'" << std::endl;
-            // std::clog << "[info] `-- Shape properties: " << std::endl;
-            // my_signal_shape_properties.tree_dump(std::clog, "", "[info]     ");
             snemo::asb::build_shape(ssb1, my_signal);
           }
-          // ssb1.tree_dump(std::clog, "Signal shape builder 1", "[info] ");
+
+	  ssb1.tree_dump(std::clog, "Signal shape builder 1", "[info] ");
 
           datatools::temp_file tmp_file;
           tmp_file.set_remove_at_destroy(false);
@@ -272,17 +270,6 @@ void test_drivers_1(const params_type & params_)
                 fcount++;
               }
 
-              // std::ostringstream plot_cmd;
-              // plot_cmd << "plot "
-              //       << "  '" << tmp_file.get_filename() << "' "
-              //       << " index 0 using (column(1)"
-              //       << "):(column(2)"<< ')'
-              //       << " title 'Signal shape 1' with lines lw 6"
-              //       << ", '" << tmp_file.get_filename() << "' "
-              //       << " index 1 using (column(1)"
-              //       << "):(column(2)"<< ')'
-              //       << " title 'Signal shape 2' with lines lw 2"
-              //   ;
               g1.cmd(plot_cmd.str());
               g1.showonscreen(); // window output
               geomtools::gnuplot_drawer::wait_for_key();
@@ -420,31 +407,8 @@ void test_drivers_2(const params_type & params_)
             my_signal.get_auxiliaries().export_and_rename_starting_with(my_signal_shape_properties,
                                                                         mctools::signal::base_signal::shape_parameter_prefix(),
                                                                         "");
-            // std::clog << "[info] Signal #" << isignal << ": " << std::endl;
-            // my_signal.tree_dump(std::clog, "", "[info] ");
-            // std::clog << "[info] |-- Shape type ID: '" << my_signal.get_shape_type_id() << "'" << std::endl;
-            // std::clog << "[info] `-- Shape properties: " << std::endl;
-            // my_signal_shape_properties.tree_dump(std::clog, "", "[info]     ");
             snemo::asb::build_shape(ssb1, my_signal);
 
-	    // for (const auto & fkey : fkeys) { std::clog << "Fkey = " << fkey << std::endl;}
-
-
-	    // Derivative signal (to use in Digi part):
-	    // std::string key = "shape.2";
-	    // mygsl::unary_function_promoted_with_numeric_derivative deriv_signal;
-	    // deriv_signal.set_functor(ssb1.grab_functor(key));
-	    // // deriv_signal.tree_dump(std::clog);
-	    // std::string d_r_filename = "/tmp/deriv_signal.dat";
-	    // std::ofstream derivstream;
-	    // derivstream.open(d_r_filename);
-	    // for (double t = 0; t <= 50*CLHEP::microsecond; t+=0.1*CLHEP::microsecond)
-	    //   {
-	    // 	double d_amp = deriv_signal.eval_df(t);
-	    // 	derivstream << t / CLHEP::microsecond  << ' ' << d_amp * CLHEP::meter / CLHEP::volt << std::endl;
-	    //   }
-	    // derivstream.close();
-	    // ssb1.tree_dump(std::clog, "Signal shape builder 1", "[info] ");
 	  } // end of isignal
 
           datatools::temp_file tmp_file;
@@ -456,7 +420,7 @@ void test_drivers_2(const params_type & params_)
 	  // Build the full list of all functors to construct signal shapes
           std::set<std::string> fkeys;
           ssb1.build_list_of_functors(fkeys);
-	  ssb1.tree_dump(std::clog);
+	  // ssb1.tree_dump(std::clog);
 
 
           // Fill the temp file:
@@ -514,17 +478,6 @@ void test_drivers_2(const params_type & params_)
                 fcount++;
 	      }
 
-              // std::ostringstream plot_cmd;
-              // plot_cmd << "plot "
-              //       << "  '" << tmp_file.get_filename() << "' "
-              //       << " index 0 using (column(1)"
-              //       << "):(column(2)"<< ')'
-              //       << " title 'Signal shape 1' with lines lw 6"
-              //       << ", '" << tmp_file.get_filename() << "' "
-              //       << " index 1 using (column(1)"
-              //       << "):(column(2)"<< ')'
-              //       << " title 'Signal shape 2' with lines lw 2"
-              //   ;
               g1.cmd(plot_cmd.str());
               g1.showonscreen(); // window output
               geomtools::gnuplot_drawer::wait_for_key();

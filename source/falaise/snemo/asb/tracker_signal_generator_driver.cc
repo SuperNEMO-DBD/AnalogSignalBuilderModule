@@ -311,9 +311,6 @@ namespace snemo {
 	  if (!flaged_SD.grab_step_hit("gg", ihit).get_auxiliaries().has_flag("geiger_already_hit")) number_of_tracker_hits++;
 	}
 
-      std::clog << "Total tracker hit = " << total_number_of_tracker_hits << std::endl;
-      std::clog << "Number of 'legit' tracker hit = " << number_of_tracker_hits << std::endl;
-
 
       // Traverse the collection of tracker hits and build the collection of
       for (std::size_t ihit = 0; ihit < number_of_tracker_hits; ihit++)
@@ -516,10 +513,6 @@ namespace snemo {
 	  multi_signal_config.store("components", component_labels);
 	  a_signal.set_shape_parameters(multi_signal_config);
 	  a_signal.initialize(multi_signal_config);
-	  signal_1.tree_dump(std::clog, "A signal 1");
-	  signal_2.tree_dump(std::clog, "A signal 2");
-	  a_signal.tree_dump(std::clog, "An anodic signal composed by 2 sub signals");
-
 
 	  // Construct cathodic signals thanks to parameters already computed:
 
@@ -543,7 +536,6 @@ namespace snemo {
 	  top_cathode_signal.set_shape_real_parameter_with_explicit_unit("t2", top_cathode_t2, "ns");
 	  top_cathode_signal.set_shape_real_parameter_with_explicit_unit("amplitude", top_cathode_amplitude, "V");
 	  top_cathode_signal.initialize_simple();
-	  top_cathode_signal.tree_dump(std::clog, "A Top cathodic signal");
 
 	  // Bottom cathode signal:
 	  mctools::signal::base_signal & bottom_cathode_signal = sim_signal_data_.add_signal(get_signal_category());
@@ -565,30 +557,6 @@ namespace snemo {
 	  bottom_cathode_signal.set_shape_real_parameter_with_explicit_unit("t2", bottom_cathode_t2, "ns");
 	  bottom_cathode_signal.set_shape_real_parameter_with_explicit_unit("amplitude", bottom_cathode_amplitude, "V");
 	  bottom_cathode_signal.initialize_simple();
-	  bottom_cathode_signal.tree_dump(std::clog, "A Bottom cathodic signal");
-
-
-
-	  // DT_LOG_DEBUG(get_logging_priority(), "Cell #                     : " << ihit);
-	  // DT_LOG_DEBUG(get_logging_priority(), "Geom ID                    : " << gid);
-	  // // DT_LOG_DEBUG(get_logging_priority(), "ionization_world_pos       : " << ionization_world_pos);
-	  // // DT_LOG_DEBUG(get_logging_priority(), "avalanche_impact_world_pos : " << avalanche_impact_world_pos);
-	  // // DT_LOG_DEBUG(get_logging_priority(), "avalanche_impact_cell_pos  : " << avalanche_impact_cell_pos);
-	  // DT_LOG_DEBUG(get_logging_priority(), "geiger_cell_length         : " << _geiger_.get_cell_length() / CLHEP::mm << " mm");
-	  // DT_LOG_DEBUG(get_logging_priority(), "longitudinal_position_pos  : " << longitudinal_position / CLHEP::mm << " mm");
-	  // DT_LOG_DEBUG(get_logging_priority(), "l_bottom                   : " << l_bottom / CLHEP::mm << " mm");
-	  // DT_LOG_DEBUG(get_logging_priority(), "l_top                      : " << l_top / CLHEP::mm << " mm");
-	  // DT_LOG_DEBUG(get_logging_priority(), "longitudinal_position_pos  : " << longitudinal_position / CLHEP::mm << " mm");
-	  // DT_LOG_DEBUG(get_logging_priority(), "ionization_time            : " << ionization_time / CLHEP::microsecond << " us");
-	  // DT_LOG_DEBUG(get_logging_priority(), "drift_distance             : " << drift_distance / CLHEP::mm << " mm");
-	  // DT_LOG_DEBUG(get_logging_priority(), "expected_drift_time        : " << expected_drift_time / CLHEP::microsecond << " us");
-	  // DT_LOG_DEBUG(get_logging_priority(), "computed_drift_time        : " << computed_drift_time / CLHEP::microsecond << " us");
-	  // DT_LOG_DEBUG(get_logging_priority(), "anode_time                 : " << anode_time / CLHEP::microsecond << " us");
-	  // DT_LOG_DEBUG(get_logging_priority(), "bottom_cathode_time        : " << bottom_cathode_time / CLHEP::microsecond << " us");
-	  // DT_LOG_DEBUG(get_logging_priority(), "top_cathode_time           : " << top_cathode_time / CLHEP::microsecond << " us");
-	  // std::clog << std::endl;
-
-	  // NOTE : Tracker signals cannot pile-up for the moment. First hit in a GID will create associated signals and that's it. (WIP)
 
 	} // end of ihit
 
