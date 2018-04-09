@@ -387,14 +387,36 @@ namespace snemo {
 	  const double sig1_t3 = sig1_t2 + _fall_time_;
 	  const double sig1_amplitude = get_amplitude() / 2.;
 
+	  const geomtools::id_mgr & an_id_mgr = get_geo_manager().get_id_mgr();
+
+	  const geomtools::id_mgr::categories_by_name_col_type & categories = an_id_mgr.categories_by_name();
+
+	  uint32_t anodic_wire_type   = categories.find("drift_cell_anodic_wire")->second.get_type();
+	  uint32_t cathodic_ring_type = categories.find("drift_cell_cathodic_ring")->second.get_type();
+
+	  const geomtools::id_mgr::category_info & cathode_info = get_geo_manager().get_id_mgr().get_category_info(cathodic_ring_type);
+
+	  geomtools::geom_id anodic_wire_GID = gid;
+	  anodic_wire_GID.set_type(anodic_wire_type);
+
+	  geomtools::geom_id cathodic_ring_bottom_GID = gid;
+	  cathodic_ring_bottom_GID.set_type(cathodic_ring_type);
+	  cathodic_ring_bottom_GID.set_depth(cathodic_ring_bottom_GID.get_depth() + 1);
+	  cathodic_ring_bottom_GID.set(cathode_info.get_subaddress_index("ring"), 0); // 0 is for bottom
+
+	  geomtools::geom_id cathodic_ring_top_GID = gid;
+	  cathodic_ring_top_GID.set_type(cathodic_ring_type);
+	  cathodic_ring_top_GID.set_depth(cathodic_ring_top_GID.get_depth() + 1);
+	  cathodic_ring_top_GID.set(cathode_info.get_subaddress_index("ring"), 1);    // 1 is for top
+
 	  // Build main parameters of the anodic triangle gate signals:
 	  mctools::signal::base_signal signal_1;
 	  int signal_id = this->get_running_signal_id();
 	  signal_1.set_hit_id(signal_id);
 	  this->_increment_running_signal_id();
-	  signal_1.set_geom_id(gid);
-
+	  signal_1.set_geom_id(anodic_wire_GID);
 	  signal_1.set_category(get_signal_category());
+
 	  // What is the time reference for tracker signals ? 1st tracker hit or first PMT ? What happened if there is no PMT hit... (WIP)
 	  // For the moment keep 0 as the time reference
 	  const double event_time_ref = 0;
@@ -406,6 +428,7 @@ namespace snemo {
 	  signal_1.set_shape_real_parameter_with_explicit_unit("t2", sig1_t2, "ns");
 	  signal_1.set_shape_real_parameter_with_explicit_unit("t3", sig1_t3, "ns");
 	  signal_1.set_shape_real_parameter_with_explicit_unit("amplitude", sig1_amplitude, "V");
+	  signal_1.grab_auxiliaries().store_string("subcategory", "anodic");
 	  signal_1.initialize_simple();
 	  // signal_1.tree_dump(std::clog, "Bot signal");
 
@@ -419,9 +442,9 @@ namespace snemo {
 	  signal_id = this->get_running_signal_id();
 	  signal_2.set_hit_id(signal_id);
 	  this->_increment_running_signal_id();
-	  signal_2.set_geom_id(gid);
-
+	  signal_2.set_geom_id(anodic_wire_GID);
 	  signal_2.set_category(get_signal_category());
+
 	  // What is the time reference for tracker signals ? 1st tracker hit or first PMT ? What happened if there is no PMT hit... (WIP)
 	  // For the moment keep 0 as the time reference
 	  signal_2.set_time_ref(event_time_ref);
@@ -432,6 +455,7 @@ namespace snemo {
 	  signal_2.set_shape_real_parameter_with_explicit_unit("t2", sig2_t2, "ns");
 	  signal_2.set_shape_real_parameter_with_explicit_unit("t3", sig2_t3, "ns");
 	  signal_2.set_shape_real_parameter_with_explicit_unit("amplitude", sig2_amplitude, "V");
+	  signal_2.grab_auxiliaries().store_string("subcategory", "anodic");
 	  signal_2.initialize_simple();
 	  // signal_2.tree_dump(std::clog, "Top signal");
 
@@ -447,11 +471,10 @@ namespace snemo {
 	  signal_id = this->get_running_signal_id();
 	  a_signal.set_hit_id(signal_id);
 	  this->_increment_running_signal_id();
-	  a_signal.set_geom_id(gid);
+	  a_signal.set_geom_id(anodic_wire_GID);
 	  a_signal.set_category(get_signal_category());
 	  a_signal.set_time_ref(event_time_ref);
 	  a_signal.set_shape_type_id("mctools::signal::multi_signal_shape");
-
 	  a_signal.grab_auxiliaries().store_string("subcategory", "anodic");
 
 	  datatools::properties multi_signal_config;
@@ -514,21 +537,21 @@ namespace snemo {
 	  a_signal.set_shape_parameters(multi_signal_config);
 	  a_signal.initialize(multi_signal_config);
 
-	  // Construct cathodic signals thanks to parameters already computed:
+	  // Construct cathodic signals thanks to anodic parameters already computed:
 
 	  // Top cathode signal:
 	  mctools::signal::base_signal & top_cathode_signal = sim_signal_data_.add_signal(get_signal_category());
 	  signal_id = this->get_running_signal_id();
 	  top_cathode_signal.set_hit_id(signal_id);
 	  this->_increment_running_signal_id();
-	  top_cathode_signal.set_geom_id(gid);
+	  top_cathode_signal.set_geom_id(cathodic_ring_top_GID);
 	  top_cathode_signal.set_category(get_signal_category());
 	  top_cathode_signal.set_time_ref(event_time_ref);
 	  top_cathode_signal.grab_auxiliaries().store_string("subcategory", "cathodic");
 	  top_cathode_signal.set_shape_type_id("mctools::signal::triangle_signal_shape");
 	  const double top_cathode_t0 = sig2_t2;
 	  const double top_cathode_t1 = top_cathode_t0 + _rise_time_ / 2.;
-	  const double top_cathode_t2 = top_cathode_t1 + _fall_time_; // sig2_t3;
+	  const double top_cathode_t2 = top_cathode_t1 + _fall_time_;
 	  const double top_cathode_amplitude = sig2_amplitude;
 	  top_cathode_signal.set_shape_string_parameter("polarity", "+");
 	  top_cathode_signal.set_shape_real_parameter_with_explicit_unit("t0", top_cathode_t0, "ns");
@@ -542,7 +565,7 @@ namespace snemo {
 	  signal_id = this->get_running_signal_id();
 	  bottom_cathode_signal.set_hit_id(signal_id);
 	  this->_increment_running_signal_id();
-	  bottom_cathode_signal.set_geom_id(gid);
+	  bottom_cathode_signal.set_geom_id(cathodic_ring_bottom_GID);
 	  bottom_cathode_signal.set_category(get_signal_category());
 	  bottom_cathode_signal.set_time_ref(event_time_ref);
 	  bottom_cathode_signal.grab_auxiliaries().store_string("subcategory", "cathodic");
@@ -569,7 +592,7 @@ namespace snemo {
 	      for (int isig = 0; isig < (int) sim_signal_data_.get_number_of_signals(get_signal_category()); isig++)
 		{
 		  const mctools::signal::base_signal & sig = sim_signal_data_.get_signal(get_signal_category(), isig);
-		  // sig.tree_dump(std::cerr, "Embedded signal: ", "[debug] ");
+		  // sig.tree_dump(std::cerr, "Tracker signal #" + std::to_string(sig.get_hit_id()) + " in SSD : ", "[debug] ");
 		}
 	    }
 	}
