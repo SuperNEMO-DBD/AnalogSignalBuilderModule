@@ -111,26 +111,28 @@ void test_asbm_1(const params_type & params_)
   std::clog << "[info] test_asbm_1..." << std::endl;
 
   std::string SD_bank_label   = "SD";  // Simulated Data "SD" bank label :
-  std::string SSD_bank_label  = "SSD"; // Simulated Signal Data "SD" bank label :
-  std::string calo_hit_category    = "calo";
-  std::string calo_signal_category = "sigcalo";
-  std::string tracker_hit_category = "tracker";
-  std::string tracker_signal_category = "sigtracker";
-
-  mctools::signal::signal_shape_builder ssb1;
-  ssb1.set_logging_priority(datatools::logger::PRIO_FATAL);
-  ssb1.set_category(calo_signal_category);
-  ssb1.add_registered_shape_type_id("mctools::signal::triangle_signal_shape");
-  ssb1.add_registered_shape_type_id("mctools::signal::triangle_gate_signal_shape");
-  ssb1.add_registered_shape_type_id("mctools::signal::multi_signal_shape");
-  ssb1.add_registered_shape_type_id("mygsl::linear_combination_function");
-  ssb1.initialize_simple();
-  ssb1.tree_dump(std::clog, "Signal shape builder 1", "[info] ");
+  std::string SSD_bank_label  = "SSD"; // Simulated Signal Data "SSD" bank label
 
   std::string SD_filename = "";
   if (params_.input_filename.empty()) SD_filename = "${FALAISE_ASB_TESTING_DIR}/data/Se82_0nubb-source_strips_bulk_SD_10_events.brio";
   else SD_filename = params_.input_filename;
   datatools::fetch_path_with_env(SD_filename);
+
+  // Geom manager :
+  std::string manager_config_file;
+  manager_config_file = "@falaise:config/snemo/demonstrator/geometry/4.0/manager.conf";
+  datatools::fetch_path_with_env(manager_config_file);
+  datatools::properties manager_config;
+  datatools::properties::read_config (manager_config_file,
+				      manager_config);
+  geomtools::manager my_manager;
+  manager_config.update ("build_mapping", true);
+  if (manager_config.has_key ("mapping.excluded_categories"))
+    {
+      manager_config.erase ("mapping.excluded_categories");
+    }
+  my_manager.initialize (manager_config);
+  my_manager.tree_dump(std::clog, "My geometry manager");
 
   // Event reader :
   dpp::input_module reader;
@@ -140,6 +142,19 @@ void test_asbm_1(const params_type & params_)
   reader_config.store("files.mode", "single");
   reader_config.store("files.single.filename", SD_filename);
   reader.initialize_standalone(reader_config);
+
+  // Problem in module registration :
+  // std::string asbm_config_filename = "@asb:config/snemo/demonstrator/simulation/asb/0.1/asb.conf";
+  std::string asbm_config_filename = "${FALAISE_ASB_RESOURCE_DIR}/config/snemo/demonstrator/simulation/asb/0.1/asb.conf";
+  datatools::fetch_path_with_env(asbm_config_filename);
+  datatools::properties asbm_config;
+  asbm_config.read_configuration(asbm_config_filename);
+  // asbm_config.tree_dump(std::clog, "Analog Signal Builder Module config: ", "[info] ");
+
+  // Analog Signal Builder module:
+  snemo::asb::analog_signal_builder_module asbm1;
+  asbm1.set_geometry_manager(my_manager);
+  asbm1.initialize_standalone(asbm_config);
 
   // Event record :
   datatools::things ER;
@@ -152,12 +167,29 @@ void test_asbm_1(const params_type & params_)
     if (ER.has(SD_bank_label) && ER.is_a<mctools::simulated_data>(SD_bank_label)) {
       // Access to the "SD" bank with a stored `mctools::simulated_data' :
       const mctools::simulated_data & SD = ER.get<mctools::simulated_data>(SD_bank_label);
-      mctools::signal::signal_data SSD;
 
-      if (SD.has_step_hits(calo_hit_category)) {
-        std::clog << "[info] Found '" << calo_hit_category << "' hits..." << std::endl;
-        // CSGD1.process(SD, SSD);
-        std::clog << "[info] SSD size = " << SSD.get_number_of_signals(calo_signal_category) << std::endl;
+      asbm1.process(ER);
+      // ER.tree_dump(std::clog, "an ER after processing");
+
+      const mctools::signal::signal_data & SSD = ER.get<mctools::signal::signal_data>(SSD_bank_label);
+      SSD.tree_dump(std::clog, "A SSD");
+
+      std::string signal_category = "sigcalo";
+      if (SSD.has_signals(signal_category)) {
+	std::size_t number_of_calos = SSD.get_number_of_signals(signal_category);
+	for (std::size_t icalo = 0; icalo < number_of_calos; icalo++) {
+	  const mctools::signal::base_signal & a_calo_signal = SSD.get_signal(signal_category,icalo);
+	  // a_calo_signal.tree_dump(std::clog,"A calo signal");
+	}
+      }
+
+      signal_category = "sigtracker";
+      if (SSD.has_signals(signal_category)) {
+	std::size_t number_of_trackers = SSD.get_number_of_signals(signal_category);
+	for (std::size_t itrack = 0; itrack < number_of_trackers; itrack++) {
+	  const mctools::signal::base_signal & a_tracker_signal = SSD.get_signal(signal_category, itrack);
+	  // a_tracker_signal.tree_dump(std::clog,"A tracker signal");
+	}
       }
 
       ER.clear();

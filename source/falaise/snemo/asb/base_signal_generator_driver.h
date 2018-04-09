@@ -165,6 +165,25 @@ namespace snemo {
 
 } // end of namespace snemo
 
+
+/* Macros for interface/implementation of static creator methods in module classes */
+
+#define SNEMO_ASB_SIGNAL_GENERATOR_DRIVER_REGISTRATION_INTERFACE(T)                            \
+  private:                                                              \
+  DATATOOLS_FACTORY_SYSTEM_AUTO_REGISTRATION_INTERFACE(::snemo::asb::base_signal_generator_driver,T) \
+  /**/
+
+/** Implementation macro to automate the registration of the module in the global register for
+ *  data processing modules.
+ **/
+
+#define SNEMO_ASB_SIGNAL_GENERATOR_DRIVER_REGISTRATION_IMPLEMENT(T,DriverID)                   \
+  DATATOOLS_FACTORY_SYSTEM_AUTO_REGISTRATION_IMPLEMENTATION(::snemo::asb::base_signal_generator_driver,T,DriverID) \
+  /**/
+
+
+
+
 #include <datatools/ocd_macros.h>
 
 // Declare the OCD interface of the module

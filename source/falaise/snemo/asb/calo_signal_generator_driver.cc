@@ -37,6 +37,11 @@ namespace snemo {
 
   namespace asb {
 
+    // Registration instantiation macro :
+    SNEMO_ASB_SIGNAL_GENERATOR_DRIVER_REGISTRATION_IMPLEMENT(calo_signal_generator_driver, "snemo::asb::calo_signal_generator_driver")
+
+    /*** Implementation of the interface ***/
+
     void calo_signal_generator_driver::_set_defaults_()
     {
       _model_ = MODEL_INVALID;
@@ -182,10 +187,6 @@ namespace snemo {
     void calo_signal_generator_driver::_process_triangle_model_(const mctools::simulated_data & sim_data_,
                                                                 mctools::signal::signal_data & sim_signal_data_)
     {
-      // For the moment, each calorimeter hit is represented by a triangle calo signal.
-      // The next step is to take into account multi hit into one GID. Several
-      // 'small' signals must construct a 'multi signal' for one GID (sum)
-
       std::string hit_label = get_hit_category();
       if (!sim_data_.has_step_hits(hit_label)) {
         // No hit in the proper category:
@@ -388,11 +389,11 @@ namespace snemo {
         }
       }
       DT_LOG_DEBUG(get_logging_priority(), "Signal data: ");
-      sim_signal_data_.tree_dump(std::cerr, "", "[debug] ");
+      // sim_signal_data_.tree_dump(std::cerr, "", "[debug] ");
       if (datatools::logger::is_debug(get_logging_priority())) {
         for (int isig = 0; isig < (int) sim_signal_data_.get_number_of_signals(get_signal_category()); isig++) {
           const mctools::signal::base_signal & sig = sim_signal_data_.get_signal(get_signal_category(), isig);
-          sig.tree_dump(std::cerr, "Embedded signal: ", "[debug] ");
+          // sig.tree_dump(std::cerr, "Embedded signal: ", "[debug] ");
         }
       }
       return;

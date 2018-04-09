@@ -1,7 +1,22 @@
 // snemo/asb/calo_signal_generator_driver.h
-// Author(s): F. Mauger <mauger@lpccaen.in2p3.fr>
-// Author(s): G. Oliviéro <goliviero@lpccaen.in2p3.fr>
-// Date: 2016-12-02
+//
+// Copyright (c) 2016-2018 F. Mauger <mauger@lpccaen.in2p3.fr>
+//                         G. Oliviéro <goliviero@lpccaen.in2p3.fr>
+//
+// This file is part of Falaise/ASB plugin.
+//
+// Falaise/ASB plugin is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Falaise/ASB plugin is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Falaise/ASB plugin.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifndef FALAISE_ASB_PLUGIN_SNEMO_ASB_CALO_SIGNAL_GENERATOR_DRIVER_H
 #define FALAISE_ASB_PLUGIN_SNEMO_ASB_CALO_SIGNAL_GENERATOR_DRIVER_H
@@ -100,6 +115,9 @@ namespace snemo {
       double _rise_time_;                 //!< Characteristic rise time for PMT signals
       double _fall_time_;                 //!< Characteristic fall time for PMT signals
       double _energy_amplitude_factor_;   //!< Energy-signal amplitude conversion factor
+
+			// Macro to automate the registration of the driver :
+			SNEMO_ASB_SIGNAL_GENERATOR_DRIVER_REGISTRATION_INTERFACE(calo_signal_generator_driver)
 
     };
 

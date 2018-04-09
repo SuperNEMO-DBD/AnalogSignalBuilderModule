@@ -37,6 +37,11 @@ namespace snemo {
 
   namespace asb {
 
+    // Registration instantiation macro :
+    SNEMO_ASB_SIGNAL_GENERATOR_DRIVER_REGISTRATION_IMPLEMENT(tracker_signal_generator_driver, "snemo::asb::tracker_signal_generator_driver")
+
+    /*** Implementation of the interface ***/
+
     void tracker_signal_generator_driver::_set_defaults_()
     {
       _model_ = MODEL_INVALID;
@@ -169,31 +174,6 @@ namespace snemo {
       _geiger_.reset();
       _set_defaults_();
       return;
-    }
-
-    bool tracker_signal_generator_driver::has_external_random() const
-    {
-      return _external_random_ != 0;
-    }
-
-    void tracker_signal_generator_driver::reset_external_random()
-    {
-      DT_THROW_IF(is_initialized(), std::logic_error, "Driver is already initialized !");
-      _external_random_ = 0;
-      return;
-    }
-
-    void tracker_signal_generator_driver::set_external_random(mygsl::rng & rng_)
-    {
-      DT_THROW_IF(is_initialized(), std::logic_error, "Driver is already initialized !");
-      _external_random_ = & rng_;
-      return;
-    }
-    mygsl::rng & tracker_signal_generator_driver::_get_random()
-    {
-      // if (has_external_random())
-      return *_external_random_;
-      //return _random_;
     }
 
     void tracker_signal_generator_driver::_process(const mctools::simulated_data & sim_data_,
@@ -352,11 +332,10 @@ namespace snemo {
 	  const double ionization_time = a_tracker_hit.get_time_start();
 
 	  /*** Anode TDC ***/
-	  // randomize the expected Geiger drift time:
-	  const double expected_drift_time = _geiger_.randomize_drift_time_from_drift_distance(_get_random(), drift_distance);
+	  // Compute the Geiger drift time:
 	  const double computed_drift_time = _geiger_.compute_drift_time_from_drift_distance(drift_distance);
 
-	  const double anode_time = ionization_time + expected_drift_time;
+	  const double anode_time = ionization_time + computed_drift_time;
 	  const double sigma_anode_time = _geiger_.get_sigma_anode_time(anode_time);
 
 	  /*** Cathodes TDCs ***/
@@ -584,7 +563,7 @@ namespace snemo {
 	} // end of ihit
 
       DT_LOG_DEBUG(get_logging_priority(), "Signal data: ");
-      sim_signal_data_.tree_dump(std::cerr, "", "[debug] ");
+      // sim_signal_data_.tree_dump(std::cerr, "", "[debug] ");
       if (sim_signal_data_.has_signals(get_signal_category()))
 	{
 	  if (datatools::logger::is_debug(get_logging_priority()))

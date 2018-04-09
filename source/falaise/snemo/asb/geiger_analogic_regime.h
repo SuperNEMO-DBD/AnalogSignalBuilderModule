@@ -36,11 +36,6 @@ namespace datatools
   class properties;
 }
 
-namespace mygsl
-{
-  class rng;
-}
-
 namespace snemo {
 
   namespace asb {
@@ -116,9 +111,6 @@ namespace snemo {
 
       /// Reset
       void reset();
-
-      /// Randomize the drift time from the drift distance of a Geiger hit
-      double randomize_drift_time_from_drift_distance(mygsl::rng & ran_, double drift_distance_) const;
 
       /// Compute the drift time from the drift distance of a Geiger hit
       double compute_drift_time_from_drift_distance(double drift_distance_) const;

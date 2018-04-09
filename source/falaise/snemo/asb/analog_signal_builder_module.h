@@ -25,8 +25,6 @@ namespace snemo {
 
   namespace asb {
 
-    class base_signal_generator_driver;
-
     /// \brief The data processing module for building simulated signal hits
     ///
     /// The analog signal builder (ASB) module embeded a collection of signal generator drivers
@@ -47,38 +45,6 @@ namespace snemo {
       virtual ~analog_signal_builder_module();
 
       /// Initialization
-      ///
-      /// Example of configuration:
-      /// \code
-      /// SD_label  : string = "SD"
-      /// SSD_label : string = "SSD"
-      /// Geo_label : string = "geometry"
-      /// Db_label  : string = "database"
-      /// abort_at_missing_input : boolean = true
-      /// abort_at_former_output : boolean = false
-      /// preserve_former_output : boolean = false
-      ///
-      /// drivers : string[4] = "calo" "xcalo" "gveto" "gg"
-      ///
-      /// driver.calo.type_id : string = "snemo::asb::calo_signal_generator_driver"
-      /// driver.calo.config.model : string = "triangle"
-      /// driver.calo.config.db_access : boolean = true
-      ///
-      /// driver.xcalo.type_id : string = "snemo::asb::calo_signal_generator_driver"
-      /// driver.xcalo.config.gain : real = 0.95e5
-      /// driver.xcalo.config.db_access : boolean = true
-      ///
-      /// driver.gveto.type_id : string = "snemo::asb::calo_signal_generator_driver"
-      /// driver.gveto.config.gain : real = 0.93e5
-      /// driver.gveto.config.db_access : boolean = true
-      ///
-      /// driver.gg.type_id : string = "snemo::asb::tracker_signal_generator_driver"
-      /// driver.gg.config.gain : real = 0.93e5
-      /// driver.gg.config.db_access : boolean = true
-      ///
-      /// \endcode
-      ///
-      ///
       virtual void initialize(const datatools::properties  & setup_,
                               datatools::service_manager   & service_manager_,
                               dpp::module_handle_dict_type & module_dict_);

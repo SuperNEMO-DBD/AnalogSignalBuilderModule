@@ -29,9 +29,6 @@
 // - Boost:
 #include <boost/noncopyable.hpp>
 
-// - Bayeux/mygsl:
-#include <mygsl/rng.h>
-
 // This project:
 #include <snemo/asb/base_signal_generator_driver.h>
 #include <snemo/asb/geiger_analogic_regime.h>
@@ -63,15 +60,6 @@ namespace snemo {
 
       /// Destructor
       virtual ~tracker_signal_generator_driver();
-
-			/// Set the external PRNG
-			void set_external_random(mygsl::rng & rng_);
-
-			/// Reset the external PRNG
-			void reset_external_random();
-
-			/// Check if the module use an external PRNG
-			bool has_external_random() const;
 
       /// Set the driver model
       void set_model(const model_type);
@@ -105,9 +93,6 @@ namespace snemo {
       /// Reset the algorithm
       virtual void _reset();
 
-			/// Getting random number generator
-			mygsl::rng & _get_random();
-
       /// Run the algorithm
       void _process(const mctools::simulated_data & sim_data_,
                     mctools::signal::signal_data & sim_signal_data_);
@@ -128,13 +113,14 @@ namespace snemo {
     private:
 
       model_type _model_ = MODEL_INVALID;       //!< Model type for Geiger cells signals
-			mygsl::rng * _external_random_ = nullptr; //!< external PRN generator
 			geiger_analogic_regime _geiger_;          //!< Geiger analogic regime tools
 
       double _rise_time_; //!< Characteristic rise time for GG cell signals
       double _fall_time_; //!< Characteristic fall time for GG cell signals
       double _amplitude_; //!< Characteristic amplitude time for GG cell anodic signal
 
+			// Macro to automate the registration of the driver :
+			SNEMO_ASB_SIGNAL_GENERATOR_DRIVER_REGISTRATION_INTERFACE(tracker_signal_generator_driver)
     };
 
   } // end of namespace asb

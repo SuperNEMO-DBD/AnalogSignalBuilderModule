@@ -13,8 +13,6 @@
 // - Bayeux/dpp:
 #include <dpp/input_module.h>
 #include <dpp/output_module.h>
-// - Bayeux/mygsl:
-#include <mygsl/rng.h>
 
 // Falaise:
 #include <falaise/falaise.h>
@@ -144,14 +142,9 @@ void test_tsgd_3(const params_type & params_)
   std::clog << "[info] test_tsgd_3..." << std::endl;
 
   std::string SD_bank_label   = "SD";  // Simulated Data "SD" bank label :
-  std::string SSD_bank_label  = "SSD";  // Simulated Signal Data "SSD" bank label :
+  std::string SSD_bank_label  = "SSD"; // Simulated Signal Data "SSD" bank label :
   std::string hit_category    = "gg";
   std::string signal_category = "sigtracker";
-
-  // PRNG :
-  int32_t seed = 314159;
-  mygsl::rng random_generator;
-  random_generator.initialize(seed);
 
   // Geom manager :
   std::string manager_config_file;
@@ -179,7 +172,6 @@ void test_tsgd_3(const params_type & params_)
 
   snemo::asb::tracker_signal_generator_driver TSGD;
   TSGD.set_geo_manager(my_manager);
-  TSGD.set_external_random(random_generator);
   // TSGD.set_logging_priority(params_.logging)
   TSGD.initialize(tracker_signal_generator_config);
   TSGD.tree_dump(std::clog, "My tracker signal generator driver: ", "[info] ");

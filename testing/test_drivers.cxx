@@ -304,11 +304,6 @@ void test_drivers_2(const params_type & params_)
   std::string hit_category    = "gg";
   std::string signal_category = "sigtracker";
 
-  // PRNG :
-  int32_t seed = 314159;
-  mygsl::rng random_generator;
-  random_generator.initialize(seed);
-
   // Geom manager :
   std::string manager_config_file;
   manager_config_file = "@falaise:config/snemo/demonstrator/geometry/4.0/manager.conf";
@@ -338,7 +333,6 @@ void test_drivers_2(const params_type & params_)
   snemo::asb::tracker_signal_generator_driver TSGD1;
   TSGD1.set_logging_priority(datatools::logger::PRIO_DEBUG);
   TSGD1.set_geo_manager(my_manager);
-  TSGD1.set_external_random(random_generator);
   TSGD1.set_id("TrackerSignal");
   TSGD1.set_hit_category(hit_category);
   TSGD1.set_signal_category(signal_category);
