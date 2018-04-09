@@ -27,6 +27,9 @@
 #include <geomtools/gnuplot_drawer.h>
 #endif // GEOMTOOLS_WITH_GNUPLOT_DISPLAY
 
+// Boost :
+#include <boost/program_options.hpp>
+
 // Falaise:
 #include <falaise/falaise.h>
 
@@ -116,7 +119,7 @@ void test_asbm_1(const params_type & params_)
 
   mctools::signal::signal_shape_builder ssb1;
   ssb1.set_logging_priority(datatools::logger::PRIO_FATAL);
-  ssb1.set_category(signal_category);
+  ssb1.set_category(calo_signal_category);
   ssb1.add_registered_shape_type_id("mctools::signal::triangle_signal_shape");
   ssb1.add_registered_shape_type_id("mctools::signal::triangle_gate_signal_shape");
   ssb1.add_registered_shape_type_id("mctools::signal::multi_signal_shape");
@@ -124,18 +127,16 @@ void test_asbm_1(const params_type & params_)
   ssb1.initialize_simple();
   ssb1.tree_dump(std::clog, "Signal shape builder 1", "[info] ");
 
-  std::string SD_filename
-    = "${FALAISE_ASB_TESTING_DIR}/data/Se82_0nubb-source_strips_bulk_SD_10_events.brio";
-  int event_number = 5;
-  if (params_.is_event_number){
-    event_number = params_.arg_event_number;
-  }
+  std::string SD_filename = "";
+  if (params_.input_filename.empty()) SD_filename = "${FALAISE_ASB_TESTING_DIR}/data/Se82_0nubb-source_strips_bulk_SD_10_events.brio";
+  else SD_filename = params_.input_filename;
+  datatools::fetch_path_with_env(SD_filename);
 
   // Event reader :
   dpp::input_module reader;
   datatools::properties reader_config;
   reader_config.store("logging.priority", "notice");
-  reader_config.store("max_record_total", event_number);
+  reader_config.store("max_record_total", params_.number_of_events);
   reader_config.store("files.mode", "single");
   reader_config.store("files.single.filename", SD_filename);
   reader.initialize_standalone(reader_config);
@@ -153,10 +154,10 @@ void test_asbm_1(const params_type & params_)
       const mctools::simulated_data & SD = ER.get<mctools::simulated_data>(SD_bank_label);
       mctools::signal::signal_data SSD;
 
-      if (SD.has_step_hits(hit_category)) {
-        std::clog << "[info] Found '" << hit_category << "' hits..." << std::endl;
+      if (SD.has_step_hits(calo_hit_category)) {
+        std::clog << "[info] Found '" << calo_hit_category << "' hits..." << std::endl;
         // CSGD1.process(SD, SSD);
-        std::clog << "[info] SSD size = " << SSD.get_number_of_signals(signal_category) << std::endl;
+        std::clog << "[info] SSD size = " << SSD.get_number_of_signals(calo_signal_category) << std::endl;
       }
 
       ER.clear();
