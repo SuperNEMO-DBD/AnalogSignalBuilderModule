@@ -33,12 +33,13 @@
 // This project :
 #include <snemo/asb/analog_signal_builder_module.h>
 
+
 struct params_type
 {
   datatools::logger::priority logging = datatools::logger::PRIO_DEBUG;
   bool draw = false;
-  bool is_event_number = false;
-  int  arg_event_number = -1;
+  int number_of_events = -1;
+  std::string input_filename = "";
 };
 
 void test_asbm_1(const params_type &);
@@ -46,26 +47,47 @@ void test_asbm_1(const params_type &);
 int main( int  argc_ , char **argv_  )
 {
   falaise::initialize(argc_, argv_);
-   int error_code = EXIT_SUCCESS;
+  int error_code = EXIT_SUCCESS;
   try {
     std::clog << "Test program for class 'snemo::asb::analog_signal_builder_module'!" << std::endl;
 
     // Parameters:
     params_type params;
 
-    // Parsing command line  arguments
-    int iarg = 1;
-    while (iarg < argc_) {
-      std::string arg = argv_[iarg];
-      if (arg == "-D" || arg == "--draw") {
-        params.draw = true;
-      } else if (arg == "-n" || arg == "--number") {
-        params.is_event_number = true;
-        params.arg_event_number = atoi(argv_[++iarg]);
-      }
-      iarg++;
+    // Parse options:
+    namespace po = boost::program_options;
+    po::options_description opts("Allowed options");
+    opts.add_options()
+      ("help,h", "produce help message")
+      ("draw,D", "draw option")
+      ("input,i",
+       po::value<std::string>(& params.input_filename),
+       "set an input file")
+      ("number_of_events,n",
+       po::value<int>(& params.number_of_events)->default_value(5),
+       "set the maximum number of events")
+      ; // end of options description
+
+    // Describe command line arguments :
+    po::variables_map vm;
+    po::store(po::command_line_parser(argc_, argv_)
+	      .options(opts)
+	      .run(), vm);
+    po::notify(vm);
+
+    // Use command line arguments :
+    if (vm.count("help")) {
+      std::cout << "Usage : " << std::endl;
+      std::cout << opts << std::endl;
+      return(error_code);
     }
 
+    // Use command line arguments :
+    if (vm.count("draw")) {
+      params.draw = true;
+    }
+
+    std::clog << "First test..." << std::endl;
     test_asbm_1(params);
 
     std::clog << "The end." << std::endl;
@@ -86,8 +108,11 @@ void test_asbm_1(const params_type & params_)
   std::clog << "[info] test_asbm_1..." << std::endl;
 
   std::string SD_bank_label   = "SD";  // Simulated Data "SD" bank label :
-  std::string hit_category    = "calo";
-  std::string signal_category = "sigcalo";
+  std::string SSD_bank_label  = "SSD"; // Simulated Signal Data "SD" bank label :
+  std::string calo_hit_category    = "calo";
+  std::string calo_signal_category = "sigcalo";
+  std::string tracker_hit_category = "tracker";
+  std::string tracker_signal_category = "sigtracker";
 
   mctools::signal::signal_shape_builder ssb1;
   ssb1.set_logging_priority(datatools::logger::PRIO_FATAL);
@@ -130,7 +155,7 @@ void test_asbm_1(const params_type & params_)
 
       if (SD.has_step_hits(hit_category)) {
         std::clog << "[info] Found '" << hit_category << "' hits..." << std::endl;
-        CSGD1.process(SD, SSD);
+        // CSGD1.process(SD, SSD);
         std::clog << "[info] SSD size = " << SSD.get_number_of_signals(signal_category) << std::endl;
       }
 

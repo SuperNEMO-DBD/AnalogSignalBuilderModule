@@ -89,9 +89,11 @@ list(APPEND FalaiseAnalogSignalBuilderPlugin_HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/flasb.h
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/detail/flasb_sys.h
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/utils.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/geiger_analogic_regime.h
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/base_signal_generator_driver.h
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/analog_signal_builder_module.h
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/calo_signal_generator_driver.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/tracker_signal_generator_driver.h
   )
 
 # - Sources:
@@ -102,9 +104,11 @@ list(APPEND FalaiseAnalogSignalBuilderPlugin_SOURCES
   ${CMAKE_CURRENT_BINARY_DIR}/source/falaise/snemo/asb/flasb.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/detail/flasb_sys.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/utils.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/geiger_analogic_regime.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/base_signal_generator_driver.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/analog_signal_builder_module.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/calo_signal_generator_driver.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/source/falaise/snemo/asb/tracker_signal_generator_driver.cc
   )
 
 ############################################################################################
@@ -115,8 +119,8 @@ add_library(Falaise_AnalogSignalBuilder SHARED
   ${FalaiseAnalogSignalBuilderPlugin_SOURCES})
 target_include_directories(Falaise_AnalogSignalBuilder
   PUBLIC
-    ${PROJECT_SOURCE_DIR}/source
-    ${PROJECT_SOURCE_DIR}/source/falaise
+  ${PROJECT_SOURCE_DIR}/source
+  ${PROJECT_SOURCE_DIR}/source/falaise
   )
 
 target_link_libraries(Falaise_AnalogSignalBuilder PUBLIC Falaise::FalaiseModule)

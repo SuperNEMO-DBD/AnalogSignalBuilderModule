@@ -2,9 +2,10 @@
 set(FalaiseAnalogSignalBuilderPlugin_TESTS
   test_version.cxx
   test_calo_signal_generator_driver.cxx
+  test_tracker_signal_generator_driver.cxx
   test_drivers.cxx
   test_flasb.cxx
-  # test_analog_signal_builder_module.cxx
+  test_analog_signal_builder_module.cxx
  )
 
 # # - Use C++11
