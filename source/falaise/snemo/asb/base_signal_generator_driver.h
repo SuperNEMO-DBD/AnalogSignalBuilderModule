@@ -102,6 +102,10 @@ namespace snemo {
       /// Reset the algorithm
       void reset();
 
+			/// Build a multi signal from a list of atomic signals
+			void build_multi_signal(mctools::signal::base_signal & a_multi_signal_,
+															const std::vector<mctools::signal::base_signal> & list_of_atomic_signal_);
+
       /// Run the algorithm
       void process(const mctools::simulated_data & sim_data_,
                    mctools::signal::signal_data & sim_signal_data_);

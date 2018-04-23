@@ -15,10 +15,12 @@
 // - Bayeux/mctools:
 #include <mctools/simulated_data.h>
 #include <mctools/signal/signal_shape_builder.h>
+#include <mctools/signal/utils.h>
+
 // - Bayeux/dpp:
 #include <dpp/input_module.h>
 #include <dpp/output_module.h>
-// - Bayeux/dpp:
+// - Bayeux/mygsl:
 #include <mygsl/parameter_store.h>
 #include <mygsl/i_unary_function_with_derivative.h>
 
@@ -202,7 +204,7 @@ void test_drivers_1(const params_type & params_)
             my_signal.get_auxiliaries().export_and_rename_starting_with(my_signal_shape_properties,
                                                                         mctools::signal::base_signal::shape_parameter_prefix(),
                                                                         "");
-            snemo::asb::build_shape(ssb1, my_signal);
+	    mctools::signal::build_shape(ssb1, my_signal);
           }
 
 	  ssb1.tree_dump(std::clog, "Signal shape builder 1", "[info] ");
@@ -401,7 +403,7 @@ void test_drivers_2(const params_type & params_)
             my_signal.get_auxiliaries().export_and_rename_starting_with(my_signal_shape_properties,
                                                                         mctools::signal::base_signal::shape_parameter_prefix(),
                                                                         "");
-            snemo::asb::build_shape(ssb1, my_signal);
+	    mctools::signal::build_shape(ssb1, my_signal);
 
 	  } // end of isignal
 
@@ -426,7 +428,7 @@ void test_drivers_2(const params_type & params_)
             ssb1.get_functor(fkey).write_ascii_with_units(tmp_file.out(),
                                                           -0.0 * CLHEP::microsecond,
                                                           +100.0 * CLHEP::microsecond,
-                                                          3000,
+                                                          1500,
                                                           CLHEP::microsecond,
                                                           CLHEP::volt,
                                                           16, 16

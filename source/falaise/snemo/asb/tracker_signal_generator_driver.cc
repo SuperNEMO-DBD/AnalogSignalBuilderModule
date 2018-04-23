@@ -22,10 +22,6 @@
 #include <snemo/asb/tracker_signal_generator_driver.h>
 
 // Third party:
-// - Boost:
-#include <boost/lexical_cast.hpp>
-// - Bayeux/geomtools:
-#include <bayeux/geomtools/sensitive.h>
 // - Bayeux/mctools:
 #include <bayeux/mctools/signal/base_signal.h>
 #include <bayeux/mctools/utils.h>
@@ -438,12 +434,55 @@ namespace snemo {
 	  signal_2.initialize_simple();
 	  // signal_2.tree_dump(std::clog, "Top signal");
 
-	  bool build_signal = true;
-	  // Should we consider case where we do not generate the
-	  // signal associated to the hit ?
-	  if (!build_signal) {
-	    continue;
-	  }
+	  const double top_cathode_t0 = sig2_t2;
+	  const double top_cathode_t1 = top_cathode_t0 + _rise_time_ / 2.;
+	  const double top_cathode_t2 = top_cathode_t1 + _fall_time_ / 2.;
+	  const double top_cathode_amplitude = sig2_amplitude;
+
+	  const double bottom_cathode_t0 = sig1_t2;
+	  const double bottom_cathode_t1 = bottom_cathode_t0 + _rise_time_ / 2.;
+	  const double bottom_cathode_t2 = bottom_cathode_t1 + _fall_time_ / 2.;
+	  const double bottom_cathode_amplitude = sig1_amplitude;
+
+	  // Construct peak on anodic signal due to cathodic ring collection
+	  mctools::signal::base_signal signal_3;
+	  signal_id = this->get_running_signal_id();
+	  signal_3.set_hit_id(signal_id);
+	  this->_increment_running_signal_id();
+	  signal_3.set_geom_id(anodic_wire_GID);
+	  signal_3.set_category(get_signal_category());
+	  signal_3.set_time_ref(event_time_ref);
+	  signal_3.set_shape_type_id("mctools::signal::triangle_signal_shape");
+	  signal_3.set_shape_string_parameter("polarity", "-");
+	  signal_3.set_shape_real_parameter_with_explicit_unit("t0", top_cathode_t0, "ns");
+	  signal_3.set_shape_real_parameter_with_explicit_unit("t1", top_cathode_t1, "ns");
+	  signal_3.set_shape_real_parameter_with_explicit_unit("t2", top_cathode_t2, "ns");
+	  signal_3.set_shape_real_parameter_with_explicit_unit("amplitude", 2 * top_cathode_amplitude, "V");
+	  signal_3.grab_auxiliaries().store_string("subcategory", "anodic");
+	  signal_3.initialize_simple();
+
+	  mctools::signal::base_signal signal_4;
+	  signal_id = this->get_running_signal_id();
+	  signal_4.set_hit_id(signal_id);
+	  this->_increment_running_signal_id();
+	  signal_4.set_geom_id(anodic_wire_GID);
+	  signal_4.set_category(get_signal_category());
+	  signal_4.set_time_ref(event_time_ref);
+	  signal_4.set_shape_type_id("mctools::signal::triangle_signal_shape");
+	  signal_4.set_shape_string_parameter("polarity", "-");
+	  signal_4.set_shape_real_parameter_with_explicit_unit("t0", bottom_cathode_t0, "ns");
+	  signal_4.set_shape_real_parameter_with_explicit_unit("t1", bottom_cathode_t1, "ns");
+	  signal_4.set_shape_real_parameter_with_explicit_unit("t2", bottom_cathode_t2, "ns");
+	  signal_4.set_shape_real_parameter_with_explicit_unit("amplitude", 2 * bottom_cathode_amplitude, "V");
+	  signal_4.grab_auxiliaries().store_string("subcategory", "anodic");
+	  signal_4.initialize_simple();
+
+	  std::vector<mctools::signal::base_signal> list_of_atomic_signal;
+	  list_of_atomic_signal.push_back(signal_1);
+	  list_of_atomic_signal.push_back(signal_2);
+	  list_of_atomic_signal.push_back(signal_3);
+	  list_of_atomic_signal.push_back(signal_4);
+
 
 	  // Build a new signal composed by 2 sub signals (1 top 1 bottom)
 	  mctools::signal::base_signal & a_signal = sim_signal_data_.add_signal(get_signal_category());
@@ -456,68 +495,10 @@ namespace snemo {
 	  a_signal.set_shape_type_id("mctools::signal::multi_signal_shape");
 	  a_signal.grab_auxiliaries().store_string("subcategory", "anodic");
 
-	  datatools::properties multi_signal_config;
-	  std::vector<std::string> component_labels;
-	  const int comp_sig1_id = signal_1.get_hit_id();
-	  const int comp_sig2_id = signal_2.get_hit_id();
+	  // Build the anodic multi signal from atomic signals:
+	  build_multi_signal(a_signal, list_of_atomic_signal);
 
-	  std::string comp_sig1_key = "sig" + boost::lexical_cast<std::string>(comp_sig1_id);
-	  std::string comp_sig2_key = "sig" + boost::lexical_cast<std::string>(comp_sig2_id);
-	  component_labels.push_back(comp_sig1_key);
-	  component_labels.push_back(comp_sig2_key);
-
-	  std::string comp_sig1_prefix = "components." + comp_sig1_key + ".";
-	  std::string comp_sig2_prefix = "components." + comp_sig2_key + ".";
-
-	  datatools::properties comp_shape1_parameters;
-	  signal_1.get_auxiliaries().export_and_rename_starting_with(comp_shape1_parameters,
-								     mctools::signal::base_signal::shape_parameter_prefix(),
-								     "");
-	  datatools::properties comp_shape2_parameters;
-	  signal_2.get_auxiliaries().export_and_rename_starting_with(comp_shape2_parameters,
-								     mctools::signal::base_signal::shape_parameter_prefix(),
-								     "");
-
-	  std::string comp_sig1_label;
-	  build_private_signal_name(comp_sig1_id, comp_sig1_label);
-	  std::string comp_sig2_label;
-	  build_private_signal_name(comp_sig2_id, comp_sig2_label);
-
-	  // Make the signal 1 a private shape:
-	  a_signal.add_private_shape(comp_sig1_label,
-				     signal_1.get_shape_type_id(),
-				     comp_shape1_parameters);
-
-	  // Private shape
-	  std::string key_key1        = comp_sig1_prefix + "key";
-	  std::string time_shift_key1 = comp_sig1_prefix + "time_shift";
-	  std::string scaling_key1    = comp_sig1_prefix + "scaling";
-	  multi_signal_config.store(key_key1, comp_sig1_label);
-	  multi_signal_config.store_real_with_explicit_unit(time_shift_key1, 0.0 * CLHEP::ns);
-	  multi_signal_config.set_unit_symbol(time_shift_key1, "ns");
-	  multi_signal_config.store_real(scaling_key1, 1.0);
-
-
-	  // Make the signal 2 a private shape:
-	  a_signal.add_private_shape(comp_sig2_label,
-				     signal_2.get_shape_type_id(),
-				     comp_shape2_parameters);
-
-	  // Private shape
-	  std::string key_key2        = comp_sig2_prefix + "key";
-	  std::string time_shift_key2 = comp_sig2_prefix + "time_shift";
-	  std::string scaling_key2    = comp_sig2_prefix + "scaling";
-	  multi_signal_config.store(key_key2, comp_sig2_label);
-	  multi_signal_config.store_real_with_explicit_unit(time_shift_key2, 0.0 * CLHEP::ns);
-	  multi_signal_config.set_unit_symbol(time_shift_key2, "ns");
-	  multi_signal_config.store_real(scaling_key2, 1.0);
-
-	  multi_signal_config.store("components", component_labels);
-	  a_signal.set_shape_parameters(multi_signal_config);
-	  a_signal.initialize(multi_signal_config);
-
-	  // Construct cathodic signals thanks to anodic parameters already computed:
-
+	  // Construct cathodic signals thanks to parameters already computed:
 	  // Top cathode signal:
 	  mctools::signal::base_signal & top_cathode_signal = sim_signal_data_.add_signal(get_signal_category());
 	  signal_id = this->get_running_signal_id();
@@ -528,10 +509,6 @@ namespace snemo {
 	  top_cathode_signal.set_time_ref(event_time_ref);
 	  top_cathode_signal.grab_auxiliaries().store_string("subcategory", "cathodic");
 	  top_cathode_signal.set_shape_type_id("mctools::signal::triangle_signal_shape");
-	  const double top_cathode_t0 = sig2_t2;
-	  const double top_cathode_t1 = top_cathode_t0 + _rise_time_ / 2.;
-	  const double top_cathode_t2 = top_cathode_t1 + _fall_time_;
-	  const double top_cathode_amplitude = sig2_amplitude;
 	  top_cathode_signal.set_shape_string_parameter("polarity", "+");
 	  top_cathode_signal.set_shape_real_parameter_with_explicit_unit("t0", top_cathode_t0, "ns");
 	  top_cathode_signal.set_shape_real_parameter_with_explicit_unit("t1", top_cathode_t1, "ns");
@@ -549,16 +526,20 @@ namespace snemo {
 	  bottom_cathode_signal.set_time_ref(event_time_ref);
 	  bottom_cathode_signal.grab_auxiliaries().store_string("subcategory", "cathodic");
 	  bottom_cathode_signal.set_shape_type_id("mctools::signal::triangle_signal_shape");
-	  const double bottom_cathode_t0 = sig1_t2;
-	  const double bottom_cathode_t1 = bottom_cathode_t0 + _rise_time_ / 2.;
-	  const double bottom_cathode_t2 = bottom_cathode_t1 + _fall_time_;
-	  const double bottom_cathode_amplitude = sig1_amplitude;
 	  bottom_cathode_signal.set_shape_string_parameter("polarity", "+");
 	  bottom_cathode_signal.set_shape_real_parameter_with_explicit_unit("t0", bottom_cathode_t0, "ns");
 	  bottom_cathode_signal.set_shape_real_parameter_with_explicit_unit("t1", bottom_cathode_t1, "ns");
 	  bottom_cathode_signal.set_shape_real_parameter_with_explicit_unit("t2", bottom_cathode_t2, "ns");
 	  bottom_cathode_signal.set_shape_real_parameter_with_explicit_unit("amplitude", bottom_cathode_amplitude, "V");
 	  bottom_cathode_signal.initialize_simple();
+
+
+	  bool build_signal = true;
+	  // Should we consider case where we do not generate the
+	  // signal associated to the hit ?
+	  if (!build_signal) {
+	    continue;
+	  }
 
 	} // end of ihit
 
