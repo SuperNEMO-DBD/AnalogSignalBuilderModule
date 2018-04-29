@@ -9,10 +9,22 @@
 
 // - Bayeux/datatools:
 #include <datatools/utils.h>
+#include <datatools/io_factory.h>
+#include <datatools/temporary_files.h>
 #include <datatools/clhep_units.h>
 // - Bayeux/dpp:
 #include <dpp/input_module.h>
 #include <dpp/output_module.h>
+// - Bayeux/mygsl:
+#include <mygsl/parameter_store.h>
+#include <mygsl/i_unary_function_with_derivative.h>
+// - Bayeux/geomtools:
+#include <geomtools/geomtools_config.h>
+#include <geomtools/gnuplot_draw.h>
+#if GEOMTOOLS_WITH_GNUPLOT_DISPLAY == 1
+#include <geomtools/gnuplot_i.h>
+#include <geomtools/gnuplot_drawer.h>
+#endif // GEOMTOOLS_WITH_GNUPLOT_DISPLAY
 
 // Falaise:
 #include <falaise/falaise.h>
@@ -22,6 +34,7 @@
 
 // This project :
 #include <snemo/asb/tracker_signal_generator_driver.h>
+#include <snemo/asb/utils.h>
 
 struct params_type
 {
@@ -162,6 +175,16 @@ void test_tsgd_3(const params_type & params_)
   my_manager.initialize (manager_config);
   my_manager.tree_dump(std::clog, "My geometry manager");
 
+  mctools::signal::signal_shape_builder ssb1;
+  ssb1.set_logging_priority(datatools::logger::PRIO_DEBUG);
+  ssb1.set_category(signal_category);
+  ssb1.add_registered_shape_type_id("mctools::signal::triangle_signal_shape");
+  ssb1.add_registered_shape_type_id("mctools::signal::triangle_gate_signal_shape");
+  ssb1.add_registered_shape_type_id("mctools::signal::multi_signal_shape");
+  ssb1.add_registered_shape_type_id("mygsl::linear_combination_function");
+  ssb1.initialize_simple();
+  ssb1.tree_dump(std::clog, "Signal shape builder 1", "[info] ");
+
   // Tracker signal driver :
   std::string tracker_signal_generator_config_filename
     = "${FALAISE_ASB_TESTING_DIR}/config/tracker_signal_generator.conf";
@@ -207,7 +230,104 @@ void test_tsgd_3(const params_type & params_)
       if (SD.has_step_hits(hit_category)) {
         std::clog << "[info] Found '" << hit_category << "' hits..." << std::endl;
         TSGD.process(SD, SSD);
-        if (SSD.has_signals(signal_category)) std::clog << "[info] SSD size = " << SSD.get_number_of_signals(signal_category) << std::endl;
+        if (SSD.has_signals(signal_category))
+	  {
+	    std::clog << "[info] SSD size = " << SSD.get_number_of_signals(signal_category) << std::endl;
+	    SSD.tree_dump(std::clog, "SSD");
+
+	    for (unsigned int isignal = 0; isignal < SSD.get_number_of_signals(signal_category); isignal++) {
+	      const mctools::signal::base_signal & my_signal = SSD.get_signal(signal_category, isignal);
+	      datatools::properties my_signal_shape_properties;
+	      my_signal.get_auxiliaries().export_and_rename_starting_with(my_signal_shape_properties,
+									  mctools::signal::base_signal::shape_parameter_prefix(),
+									  "");
+	      snemo::asb::build_shape(ssb1, my_signal);
+	    } // end of isignal
+
+	    datatools::temp_file tmp_file;
+	    tmp_file.set_remove_at_destroy(false);
+	    tmp_file.create("/tmp", "test_drivers_");
+	    // Generate sampled shapes associated to signals:
+	    std::clog << "[info] Temp file : '" << tmp_file.get_filename() << "'" << std::endl;
+
+	    datatools::temp_file tmp_deriv_file;
+	    tmp_deriv_file.set_remove_at_destroy(false);
+	    tmp_deriv_file.create("/tmp", "test_drivers_deriv");
+	    // Generate sampled shapes associated to signals:
+	    std::clog << "[info] Temp derivative file : '" << tmp_deriv_file.get_filename() << "'" << std::endl;
+
+	    // Build the full list of all functors to construct signal shapes
+	    std::set<std::string> fkeys;
+	    ssb1.build_list_of_functors(fkeys);
+	    ssb1.tree_dump(std::clog);
+
+	    // Fill the temp file:
+	    for (const auto & fkey : fkeys) {
+	      const std::string & signal_name = fkey;
+	      if (snemo::asb::is_private_signal_name(signal_name)) continue;
+	      // std::clog << "[info] Computing signal shape '" << signal_name << "' for further plot..." << std::endl;
+	      tmp_file.out() << "#@shape=" << fkey << ":\n";
+	      ssb1.get_functor(fkey).write_ascii_with_units(tmp_file.out(),
+							    -0.0 * CLHEP::microsecond,
+							    +100.0 * CLHEP::microsecond,
+							    1500,
+							    CLHEP::microsecond,
+							    CLHEP::volt,
+							    16, 16
+							    );
+	      tmp_file.out() << "\n\n" << std::flush;
+	    }
+
+	    if (params_.draw) {
+#if GEOMTOOLS_WITH_GNUPLOT_DISPLAY == 1
+	      Gnuplot g1;
+	      g1.cmd("set title 'Test snemo::asb' ");
+	      g1.cmd("set key out");
+	      g1.cmd("set grid");
+	      g1.cmd("set xrange [-20:120]");
+	      {
+		std::ostringstream cmd1;
+		cmd1 << "volt=" << CLHEP::volt;
+		g1.cmd(cmd1.str());
+		std::ostringstream cmd2;
+		cmd2 << "nanosecond=" << CLHEP::nanosecond;
+		g1.cmd(cmd2.str());
+		// std::ostringstream cmd3;
+		// cmd3 << "nVs=nanosecond*volt";
+		// g1.cmd(cmd3.str());
+	      }
+	      g1.cmd("set yrange [-0.5:+0.1]");
+	      g1.set_xlabel("time (us)").set_ylabel("Signal (V)");
+
+	      {
+		std::size_t fcount = 0;
+		std::ostringstream plot_cmd;
+		plot_cmd << "plot ";
+		for (const auto & fkey : fkeys) {
+		  if (snemo::asb::is_private_signal_name(fkey)) continue;
+		  if (fcount > 0) { // set fcount < 3 to see only : 1 anodic signal and 2 cathodic signals
+		    plot_cmd << ',';
+		  }
+		  plot_cmd << "  '" << tmp_file.get_filename() << "' "
+			   << " index " << fcount << " using (column(1)"
+			   << "):(column(2)"<< ')'
+			   << " title 'Signal shape " << fkey << "' with lines lw 3"
+		    ;
+
+		  fcount++;
+		}
+
+		g1.cmd(plot_cmd.str());
+		g1.showonscreen(); // window output
+		geomtools::gnuplot_drawer::wait_for_key();
+		usleep(200);
+	      }
+
+#endif // GEOMTOOLS_WITH_GNUPLOT_DISPLAY == 1
+	    } // end if (draw)
+
+	    ssb1.clear_functors();
+	  }
       }
 
       ER.clear();

@@ -15,7 +15,6 @@
 // - Bayeux/mctools:
 #include <mctools/simulated_data.h>
 #include <mctools/signal/signal_shape_builder.h>
-#include <mctools/signal/utils.h>
 
 // - Bayeux/dpp:
 #include <dpp/input_module.h>
@@ -204,7 +203,7 @@ void test_drivers_1(const params_type & params_)
             my_signal.get_auxiliaries().export_and_rename_starting_with(my_signal_shape_properties,
                                                                         mctools::signal::base_signal::shape_parameter_prefix(),
                                                                         "");
-	    mctools::signal::build_shape(ssb1, my_signal);
+	    snemo::asb::build_shape(ssb1, my_signal);
           }
 
 	  ssb1.tree_dump(std::clog, "Signal shape builder 1", "[info] ");
@@ -403,7 +402,7 @@ void test_drivers_2(const params_type & params_)
             my_signal.get_auxiliaries().export_and_rename_starting_with(my_signal_shape_properties,
                                                                         mctools::signal::base_signal::shape_parameter_prefix(),
                                                                         "");
-	    mctools::signal::build_shape(ssb1, my_signal);
+	    snemo::asb::build_shape(ssb1, my_signal);
 
 	  } // end of isignal
 
