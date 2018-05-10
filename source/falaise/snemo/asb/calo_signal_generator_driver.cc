@@ -334,10 +334,11 @@ namespace snemo {
         } else {
           std::size_t number_of_signals_in_gid = it->second;
           DT_LOG_DEBUG(get_logging_priority(), "Merging " << number_of_signals_in_gid << " calo signal in GID=" << gid << "...");
+
           // Several signal in the same block:
           mctools::signal::base_signal & sim_signal
             = sim_signal_data_.add_signal(get_signal_category());
-          // The composite signal receives a new ID form the driver:
+          // The composite signal receives a new ID from the driver:
           int sim_signal_id = this->get_running_signal_id();
           this->_increment_running_signal_id();
           sim_signal.set_hit_id(sim_signal_id);
@@ -345,6 +346,7 @@ namespace snemo {
           sim_signal.set_category(get_signal_category());
           sim_signal.set_time_ref(event_time_ref);
           sim_signal.set_shape_type_id("mctools::signal::multi_signal_shape");
+
           datatools::properties multi_signal_config;
           // Traverse the collection of atomic signals with the same GID:
           std::vector<std::string> component_labels;
@@ -382,11 +384,13 @@ namespace snemo {
           }
           multi_signal_config.store("components", component_labels);
           sim_signal.set_shape_parameters(multi_signal_config);
+	  sim_signal.initialize(multi_signal_config);
+
           if (counter_of_signals_in_gid > number_of_signals_in_gid) {
             // All signal in this GIDs have been taken into account:
             break;
           }
-        }
+	}
       }
       DT_LOG_DEBUG(get_logging_priority(), "Signal data: ");
       // sim_signal_data_.tree_dump(std::cerr, "", "[debug] ");
