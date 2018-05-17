@@ -126,7 +126,7 @@ target_include_directories(Falaise_AnalogSignalBuilder
 target_link_libraries(Falaise_AnalogSignalBuilder PUBLIC Falaise::FalaiseModule)
 
 # target_compile_features(Falaise_AnalogSignalBuilder PUBLIC ${FALAISE_CXX_COMPILE_FEATURES})
-# target_compile_definitions(Falaise_AnalogSignalBuilder PRIVATE ENABLE_BINRELOC)
+target_compile_definitions(Falaise_AnalogSignalBuilder PRIVATE ENABLE_BINRELOC)
 # target_include_directories(Falaise_AnalogSignalBuilder PUBLIC
 #   $<BUILD_INTERFACE:${FALAISE_BUILD_INCLUDEDIR}>
 #   $<BUILD_INTERFACE:${PROJECT_BUILD_INCLUDEDIR}/falaise>

@@ -183,7 +183,7 @@ void test_tsgd_3(const params_type & params_)
   ssb1.add_registered_shape_type_id("mctools::signal::multi_signal_shape");
   ssb1.add_registered_shape_type_id("mygsl::linear_combination_function");
   ssb1.initialize_simple();
-  ssb1.tree_dump(std::clog, "Signal shape builder 1", "[info] ");
+  // ssb1.tree_dump(std::clog, "Signal shape builder 1", "[info] ");
 
   // Tracker signal driver :
   std::string tracker_signal_generator_config_filename
@@ -259,7 +259,7 @@ void test_tsgd_3(const params_type & params_)
 	    // Build the full list of all functors to construct signal shapes
 	    std::set<std::string> fkeys;
 	    ssb1.build_list_of_functors(fkeys);
-	    ssb1.tree_dump(std::clog);
+	    // ssb1.tree_dump(std::clog);
 
 	    // Fill the temp file:
 	    for (const auto & fkey : fkeys) {
