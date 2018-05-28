@@ -395,10 +395,12 @@ namespace snemo {
       DT_LOG_DEBUG(get_logging_priority(), "Signal data: ");
       // sim_signal_data_.tree_dump(std::cerr, "", "[debug] ");
       if (datatools::logger::is_debug(get_logging_priority())) {
-        for (int isig = 0; isig < (int) sim_signal_data_.get_number_of_signals(get_signal_category()); isig++) {
-          const mctools::signal::base_signal & sig = sim_signal_data_.get_signal(get_signal_category(), isig);
-          // sig.tree_dump(std::cerr, "Embedded signal: ", "[debug] ");
-        }
+	if (sim_signal_data_.has_signals(get_signal_category())) {
+	  for (int isig = 0; isig < (int) sim_signal_data_.get_number_of_signals(get_signal_category()); isig++) {
+	    const mctools::signal::base_signal & sig = sim_signal_data_.get_signal(get_signal_category(), isig);
+	    // sig.tree_dump(std::cerr, "Embedded signal: ", "[debug] ");
+	  }
+	}
       }
       return;
     }

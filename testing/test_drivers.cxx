@@ -461,7 +461,7 @@ void test_drivers_2(const params_type & params_)
               std::ostringstream plot_cmd;
               plot_cmd << "plot ";
               for (const auto & fkey : fkeys) {
-	      if (snemo::asb::is_private_signal_name(fkey)) continue;
+		if (snemo::asb::is_private_signal_name(fkey)) continue;
                 if (fcount > 0) {
                   plot_cmd << ',';
                 }

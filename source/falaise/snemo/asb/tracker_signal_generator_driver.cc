@@ -342,11 +342,11 @@ namespace snemo {
 	  // Maybe use the 'real' sigma cathode time and use it for the mean value for the gaussian shoot.
 	  const double l_bottom = longitudinal_position + 0.5 * _geiger_.get_cell_length();
 	  const double mean_bottom_cathode_time = l_bottom / _geiger_.get_plasma_longitudinal_speed();
-	  bottom_cathode_time = mean_bottom_cathode_time;
+	  bottom_cathode_time = std::abs(mean_bottom_cathode_time);
 
 	  const double l_top = 0.5 * _geiger_.get_cell_length() - longitudinal_position;
 	  const double mean_top_cathode_time = l_top / _geiger_.get_plasma_longitudinal_speed();
-	  top_cathode_time = mean_top_cathode_time;
+	  top_cathode_time = std::abs(mean_top_cathode_time);
 
 	  // The anodic tracker signal has 2 components (2 subsignals) due to the plasma propagation along the anodic wire.
 	  // 2 plasmas are created, one collected by the top cathode and the second collected by the bottom cathode
