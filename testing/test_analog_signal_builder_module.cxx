@@ -35,6 +35,7 @@
 
 // This project :
 #include <snemo/asb/analog_signal_builder_module.h>
+#include <snemo/asb/flasb.h>
 
 
 struct params_type
@@ -50,6 +51,7 @@ void test_asbm_1(const params_type &);
 int main( int  argc_ , char **argv_  )
 {
   falaise::initialize(argc_, argv_);
+  snemo::asb::initialize(argc_, argv_);
   int error_code = EXIT_SUCCESS;
   try {
     std::clog << "Test program for class 'snemo::asb::analog_signal_builder_module'!" << std::endl;
@@ -102,6 +104,7 @@ int main( int  argc_ , char **argv_  )
     std::cerr << "error: " << "Unexpected error!" << std::endl;
     error_code = EXIT_FAILURE;
   }
+  snemo::asb::terminate();
   falaise::terminate();
   return (error_code);
 }
@@ -144,8 +147,7 @@ void test_asbm_1(const params_type & params_)
   reader.initialize_standalone(reader_config);
 
   // Problem in module registration :
-  // std::string asbm_config_filename = "@asb:config/snemo/demonstrator/simulation/asb/0.1/asb.conf";
-  std::string asbm_config_filename = "${FALAISE_ASB_RESOURCE_DIR}/config/snemo/demonstrator/simulation/asb/0.1/asb.conf";
+  std::string asbm_config_filename = "@flasb:config/snemo/demonstrator/simulation/asb/0.1/asb.conf";
   datatools::fetch_path_with_env(asbm_config_filename);
   datatools::properties asbm_config;
   asbm_config.read_configuration(asbm_config_filename);
