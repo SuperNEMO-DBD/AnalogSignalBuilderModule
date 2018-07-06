@@ -397,9 +397,12 @@ namespace snemo {
        */
 
       // Parameters and function for t [0:4] us :
-      const double A1 = 0.561467153108633;
-      const double B1 = 0.580448313540993;
-      const double C1 = 1.69887483468611;
+      // const double A1 = 0.561467153108633;
+      // const double B1 = 0.580448313540993;
+      // const double C1 = 1.69887483468611;
+      const double A1 = 0.570947153108633;
+      const double B1 = 0.580148313540993;
+      const double C1 = 1.6567483468611;
 
       const double t_usec = time_ / CLHEP::microsecond;
       const double ut = 10. * t_usec;
