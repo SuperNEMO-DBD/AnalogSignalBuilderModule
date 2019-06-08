@@ -8,126 +8,192 @@
 
 // Third party:
 // - Bayeux/datatools:
-#include <bayeux/datatools/factory_macros.h>
-#include <bayeux/datatools/i_tree_dump.h>
 #include <bayeux/datatools/logger.h>
-#include <bayeux/datatools/object_configuration_description.h>
+#include <bayeux/datatools/i_tree_dump.h>
 #include <bayeux/datatools/properties.h>
+#include <bayeux/datatools/factory_macros.h>
+#include <bayeux/datatools/object_configuration_description.h>
 // - Bayeux/geomtools:
 #include <bayeux/geomtools/manager.h>
 // - Bayeux/mctools:
-#include <bayeux/mctools/signal/signal_data.h>
 #include <bayeux/mctools/simulated_data.h>
+#include <bayeux/mctools/signal/signal_data.h>
 
 namespace snemo {
 
-namespace asb {
+  namespace asb {
 
-//! \brief Base class for signal generator driver classes
-class base_signal_generator_driver : public datatools::i_tree_dumpable {
- public:
-  /// Constructor
-  base_signal_generator_driver(const std::string& id_ = "");
+    //! \brief Base class for signal generator driver classes
+    //!
+    //! Each signal generator driver has:
+    //! - an unique ID to identify the algorithm it embeds
+    //! - a category of signals processed by the driver
+    class base_signal_generator_driver
+      : public datatools::i_tree_dumpable
+    {
+    public:
 
-  /// Destructor
-  virtual ~base_signal_generator_driver();
+      /// Constructor
+      base_signal_generator_driver(const std::string & id_ = "");
 
-  /// Set logging priority level
-  void set_logging_priority(datatools::logger::priority logging_priority_);
+      /// Destructor
+      virtual ~base_signal_generator_driver();
 
-  /// Get logging priority
-  datatools::logger::priority get_logging_priority() const;
+      /// Set logging priority level
+      void set_logging_priority(datatools::logger::priority logging_priority_);
 
-  /// Check the algorithm ID
-  bool has_id() const;
+      /// Get logging priority
+      datatools::logger::priority get_logging_priority() const;
 
-  // Set the algorithm ID
-  void set_id(const std::string& id_);
+      /// Check the algorithm ID
+      bool has_id() const;
 
-  /// Return the algorithm ID
-  const std::string& get_id() const;
+      // Set the algorithm ID
+      void set_id(const std::string & id_);
 
-  /// Check the signal category
-  bool has_signal_category() const;
+      /// Return the algorithm ID
+      const std::string & get_id() const;
 
-  // Set the signal category
-  void set_signal_category(const std::string& category_);
+      /// Check the hit category
+      bool has_hit_category() const;
 
-  /// Return the signal category
-  const std::string& get_signal_category() const;
+      // Set the hit category
+      void set_hit_category(const std::string & category_);
 
-  /// Check geometry manager
-  bool has_geo_manager() const;
+      /// Return the hit category
+      const std::string & get_hit_category() const;
 
-  /// Set the geometry manager
-  void set_geo_manager(const geomtools::manager& mgr_);
+      /// Check the signal category
+      bool has_signal_category() const;
 
-  /// Return the geometry manager
-  const geomtools::manager& get_geo_manager() const;
+      // Set the signal category
+      void set_signal_category(const std::string & category_);
 
-  /// Check if the algorithm is initialized
-  bool is_initialized() const;
+      /// Return the signal category
+      const std::string & get_signal_category() const;
 
-  /// Initialize the algorithm through configuration properties
-  void initialize(const datatools::properties& config_);
+      /// Set the starting signal ID
+      void set_start_signal_id(const int);
 
-  /// Reset the algorithm
-  void reset();
+      /// Return the starting signal ID
+      int get_start_signal_id() const;
 
-  /// Run the algorithm
-  void process(const mctools::simulated_data& sim_data_,
-               mctools::signal::signal_data& sim_signal_data_);
+      /// Return the running signal ID
+      int get_running_signal_id() const;
 
-  // Smart print
-  virtual void tree_dump(std::ostream& out_ = std::clog, const std::string& title_ = "",
-                         const std::string& indent_ = "", bool inherit_ = false) const;
+      /// Check geometry manager
+      bool has_geo_manager() const;
 
- protected:
-  /// Set default attribute values
-  void _set_defaults();
+      /// Set the geometry manager
+      void set_geo_manager(const geomtools::manager & mgr_ );
 
-  /// Initialize the algorithm through configuration properties
-  virtual void _initialize(const datatools::properties& config_) = 0;
+      /// Return the geometry manager
+      const geomtools::manager & get_geo_manager() const;
 
-  /// Reset the algorithm
-  virtual void _reset() = 0;
+      /// Check if the algorithm is initialized
+      bool is_initialized() const;
 
-  /// Run the algorithm
-  virtual void _process(const mctools::simulated_data& sim_data_,
-                        mctools::signal::signal_data& sim_signal_data_) = 0;
+      /// Initialize the algorithm through configuration properties
+      void initialize(const datatools::properties & config_);
 
-  // Smart print
-  virtual void _tree_dump(std::ostream& out_ = std::clog, const std::string& title_ = "",
-                          const std::string& indent_ = "", bool inherit_ = false) const = 0;
+      /// Initialize the algorithm through configuration properties
+      void initialize_simple();
 
- private:
-  /// Set the initialization flag
-  void _set_initialized_(bool);
+      /// Reset the algorithm
+      void reset();
 
- private:
-  // Management:
-  bool _initialized_ = false;                      //!< Initialization status
-  datatools::logger::priority _logging_priority_;  //!< Logging priority
+			/// Build a multi signal from a list of atomic signals
+			void build_multi_signal(mctools::signal::base_signal & a_multi_signal_,
+															const std::vector<mctools::signal::base_signal> & list_of_atomic_signal_);
 
-  // Configuration:
-  std::string _id_;                                   //!< Identifier of the algorithm
-  std::string _signal_category_;                      //!< Identifier of the signal category
-  const geomtools::manager* _geo_manager_ = nullptr;  //!< Geometry manager
+      /// Run the algorithm
+      void process(const mctools::simulated_data & sim_data_,
+                   mctools::signal::signal_data & sim_signal_data_);
 
-  // Factory stuff :
-  DATATOOLS_FACTORY_SYSTEM_REGISTER_INTERFACE(base_signal_generator_driver)
-};
+      // Smart print
+      virtual void tree_dump(std::ostream & out_ = std::clog,
+                             const std::string & title_ = "",
+                             const std::string & indent_ = "",
+                             bool inherit_ = false) const;
 
-}  // end of namespace asb
 
-}  // end of namespace snemo
+    protected :
+
+      /// Set default attribute values
+      void _set_defaults();
+
+      /// Initialize the algorithm through configuration properties
+      virtual void _initialize(const datatools::properties & config_) = 0;
+
+      /// Reset the algorithm
+      virtual void _reset() = 0;
+
+      /// Run the algorithm
+      virtual void _process(const mctools::simulated_data & sim_data_,
+                            mctools::signal::signal_data & sim_signal_data_) = 0;
+
+      // Smart print
+      virtual void _tree_dump(std::ostream & out_ = std::clog,
+                              const std::string & indent_ = "") const = 0;
+
+      // Increment the running signal ID assigned to the next signal
+      void _increment_running_signal_id();
+
+    private:
+
+      /// Set the initialization flag
+      void _set_initialized_(bool);
+
+    private:
+
+      // Management:
+      bool        _initialized_ = false; //!< Initialization status
+      datatools::logger::priority _logging_priority_; //!< Logging priority
+
+      // Configuration:
+      std::string _id_;              //!< Identifier of the algorithm
+      std::string _hit_category_;    //!< Identifier of the input hit category
+      std::string _signal_category_; //!< Identifier of the output signal category
+      int         _start_signal_id_; //!< Starting signal ID
+
+      // Working resources:
+      const geomtools::manager * _geo_manager_ = nullptr; //!< Geometry manager
+      int _running_signal_id_ = -1;
+
+      // Factory stuff :
+      DATATOOLS_FACTORY_SYSTEM_REGISTER_INTERFACE(base_signal_generator_driver)
+
+    };
+
+  } // end of namespace asb
+
+} // end of namespace snemo
+
+
+/* Macros for interface/implementation of static creator methods in module classes */
+
+#define SNEMO_ASB_SIGNAL_GENERATOR_DRIVER_REGISTRATION_INTERFACE(T)                            \
+  private:                                                              \
+  DATATOOLS_FACTORY_SYSTEM_AUTO_REGISTRATION_INTERFACE(::snemo::asb::base_signal_generator_driver,T) \
+  /**/
+
+/** Implementation macro to automate the registration of the module in the global register for
+ *  data processing modules.
+ **/
+
+#define SNEMO_ASB_SIGNAL_GENERATOR_DRIVER_REGISTRATION_IMPLEMENT(T,DriverID)                   \
+  DATATOOLS_FACTORY_SYSTEM_AUTO_REGISTRATION_IMPLEMENTATION(::snemo::asb::base_signal_generator_driver,T,DriverID) \
+  /**/
+
+
+
 
 #include <datatools/ocd_macros.h>
 
 // Declare the OCD interface of the module
 DOCD_CLASS_DECLARATION(snemo::asb::base_signal_generator_driver)
 
-#endif  // FALAISE_ASB_PLUGIN_SNEMO_ASB_BASE_SIGNAL_GENERATOR_DRIVER_H
+#endif // FALAISE_ASB_PLUGIN_SNEMO_ASB_BASE_SIGNAL_GENERATOR_DRIVER_H
 
 // Local Variables: --
 // mode: c++ --

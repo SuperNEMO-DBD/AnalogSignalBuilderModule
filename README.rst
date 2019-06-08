@@ -1,5 +1,5 @@
 ============================================
-Falaise Analog Signal Builder (ASB) plugin
+Analog Signal Builder (ASB) Falaise plugin
 ============================================
 :Authors: G.Oliviéro <goliviero@lpccaen.in2p3.fr>,
 	  Y.Lemière <lemiere@lpccaen.in2p3.fr>,
@@ -7,9 +7,14 @@ Falaise Analog Signal Builder (ASB) plugin
 :Date:    29/11/2016
    ..
 
-This Falaise plugin implements  the modelization of the analog
-signals from the simulation output ("SD" bank). The produced
-output is supposed to be stored in the "SSD" bank (*simulated signal data*).
+The Analog Signal  Builder (ASB) module is a  Falaise plugin dedicated
+to the first processing stage of SuperNEMO Monte Carlo data.
+
+It aims  to process  truth simulated  data (`SD`  bank) produced  by the
+`flsimulate`  Monte  Carlo simulation  program  and  generate models  of
+analog signals associated to calorimeter and tracker hits. The result is
+then stored in the `SSD` bank (*simulated signal data*).
+
 
 UML diagram of the process :
 -----------------------------------------
